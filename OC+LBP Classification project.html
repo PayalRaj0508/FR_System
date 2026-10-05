@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Face Recognition · OC-LBP + PCA/LDA + Multi-Classifier</title>
+<style>
+:root{--bg:#070b16;--line:#1e2c4d;--txt:#dbe6ff;--mut:#7b8db5;--acc:#22d3ee;--acc2:#a78bfa;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--pink:#f472b6;--r:14px}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 15% -10%,#12224a 0,transparent 60%),radial-gradient(900px 500px at 100% 0,#2a1145 0,transparent 55%),var(--bg);color:var(--txt);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.01em}button{font:inherit;color:inherit;cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#1d2b4b;border-radius:8px;border:2px solid transparent;background-clip:content-box}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 22px;background:rgba(8,13,26,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:grid;place-items:center;font-size:20px;color:#04121c;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 0 26px rgba(34,211,238,.35)}
+.brand h1{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{margin:1px 0 0;font-size:11.5px;color:var(--mut)}
+.status{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--mut);border:1px solid var(--line);background:#0d1730;padding:7px 13px;border-radius:999px;white-space:nowrap;max-width:480px;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);box-shadow:0 0 10px currentColor;flex:0 0 8px}
+.dot.live{background:var(--acc);animation:pulse 1.1s infinite}.dot.done{background:var(--ok)}.dot.err{background:var(--bad)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.app{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;padding:18px;align-items:start}
+@media(max-width:1080px){.app{grid-template-columns:1fr}}
+aside{position:sticky;top:88px;display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 106px);overflow-y:auto;padding-right:4px}
+@media(max-width:1080px){aside{position:static;max-height:none}}
+.card{background:linear-gradient(180deg,rgba(19,31,61,.9),rgba(13,21,42,.9));border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.card>h3{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);display:flex;align-items:center;gap:8px;margin-bottom:11px}
+.card>h3::before{content:"";width:4px;height:14px;border-radius:2px;background:linear-gradient(var(--acc),var(--acc2))}
+.drop{display:block;border:1.5px dashed #2b3f6d;border-radius:12px;padding:18px 12px;text-align:center;transition:.18s;cursor:pointer;background:#0b1428;user-select:none}
+.drop:hover,.drop.over{border-color:var(--acc);background:#0e1c38;box-shadow:0 0 0 3px rgba(34,211,238,.09)}
+.drop .ico{font-size:26px;opacity:.85}.drop b{display:block;margin-top:6px;font-size:13px}.drop small{color:var(--mut);font-size:11px}
+label.f{display:block;font-size:11px;color:var(--mut);margin:10px 0 5px;letter-spacing:.04em}
+select,input[type=range],input[type=number]{width:100%;background:#0a1226;border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:8px 10px;font-size:12.5px;outline:none}
+select:focus{border-color:var(--acc)}
+input[type=range]{padding:0;height:24px;accent-color:#22d3ee;background:transparent;border:none}
+.rowv{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--mut)}.rowv b{color:var(--acc);font-variant-numeric:tabular-nums}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:10px;border:1px solid var(--line);background:#16244a;padding:10px 12px;font-size:12.5px;font-weight:600;transition:.16s}
+.btn:hover{background:#1c2f5e;border-color:#2f477f;transform:translateY(-1px)}.btn:active{transform:translateY(0)}
+.btn.primary{background:linear-gradient(135deg,#0891b2,#7c3aed);border-color:transparent;color:#fff;box-shadow:0 6px 22px rgba(56,189,248,.24)}
+.btn.primary:hover{filter:brightness(1.1)}.btn.ghost{background:transparent}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-stack{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+main{display:flex;flex-direction:column;gap:18px;min-width:0}
+.steps{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.step{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:#0c152b;transition:.2s}
+.step i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:9px;background:#1b2b4f;color:#8fa5cf}
+.step.active{color:#fff;border-color:var(--acc);box-shadow:0 0 16px rgba(34,211,238,.2)}.step.active i{background:var(--acc);color:#04121c}
+.step.done{color:var(--ok);border-color:#1c4a3c}.step.done i{background:var(--ok);color:#04121c}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.metric{position:relative;background:linear-gradient(180deg,rgba(19,31,61,.9),rgba(11,18,36,.9));border:1px solid var(--line);border-radius:12px;padding:13px 14px;overflow:hidden}
+.metric::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(var(--acc),var(--acc2));opacity:.85}
+.metric .lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.metric .val{font-size:25px;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.metric .sub{font-size:10.5px;color:var(--mut);margin-top:3px}
+.metric.good .val{color:var(--ok)}.metric.warn .val{color:var(--warn)}.metric.bad .val{color:var(--bad)}.metric.info .val{color:var(--acc)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.chartcard{background:linear-gradient(180deg,rgba(19,31,61,.85),rgba(11,18,36,.85));border:1px solid var(--line);border-radius:var(--r);padding:13px}
+.chartcard h4{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:9px}
+.chartcard canvas{width:100%;height:220px;display:block}
+.chartcard.tall canvas{height:280px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:660px}
+th,td{padding:10px 12px;text-align:right;border-bottom:1px solid #16223f;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{background:#101c38;color:var(--mut);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;position:sticky;top:0}
+tbody tr:hover{background:#101c38}tbody tr:last-child td{border-bottom:none}
+td.best{color:var(--ok);font-weight:650}td.worst{color:var(--bad)}
+.pill{display:inline-block;font-size:9.5px;padding:2px 7px;border-radius:6px;background:#16244a;color:var(--mut);border:1px solid var(--line)}
+.section-title{display:flex;align-items:center;gap:10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:4px 0 -4px}
+.section-title::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#0f1830;border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:12.5px;z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+.toast.show{opacity:1}.toast.err{border-color:#7f1d1d;color:#fecaca}.toast.ok{border-color:#14532d;color:#bbf7d0}
+.checkgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
+.checkgrid label{display:flex;align-items:center;gap:7px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:#0b1428;color:var(--mut);font-size:11px;cursor:pointer}
+.checkgrid label:hover{border-color:var(--acc);color:var(--txt)}.checkgrid input{accent-color:var(--acc)}
+.subgroup{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc2);margin:12px 0 4px;font-weight:650}
+.hint{font-size:10.5px;color:#5f7099;margin-top:6px}
+.note{font-size:11px;color:var(--mut);line-height:1.6}.note b{color:#9fb4dc}
+.tag{display:inline-block;font-size:9.5px;padding:2px 7px;border-radius:999px;background:#132a4a;color:#79b6ff;border:1px solid #1d3f6e;margin-right:4px}
+.banner{padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(167,139,250,.12));border:1px solid #2a3a6e;font-size:11px;color:#9fb4dc;margin-bottom:10px;line-height:1.6}
+.banner b{color:var(--acc)}
+.previewgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.prev{background:#0a1122;border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center}
+.prev canvas{width:100%;height:auto;display:block;border-radius:6px;background:#060b16}
+.prev div{font-size:9.5px;color:var(--mut);margin-top:5px;text-transform:uppercase;letter-spacing:.05em}
+.cm{display:grid;gap:2px;padding:8px;background:#0a1122;border:1px solid var(--line);border-radius:10px;overflow:auto}
+.cm .cell{padding:6px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums;border-radius:4px;min-width:32px}
+.cm .row-label,.cm .col-label{font-size:10px;color:var(--mut);padding:4px;text-align:center}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">◈</div>
+    <div>
+      <h1>Face Recognition · OC-LBP + PCA/LDA + Multi-Classifier</h1>
+      <p>Upload DB · Detect · Preprocess · Robustness · OC-LBP · PCA+LDA · Split · 7 ML Classifiers · Graphs</p>
+    </div>
+  </div>
+  <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Ready — upload identity folders to begin</span></div>
+</header>
+
+<div class="app">
+  <aside>
+    <div class="card">
+      <h3>1 · Upload Database</h3>
+      <label for="dbInput" class="drop" id="dbDrop">
+        <div class="ico">🗂</div>
+        <b>Upload identity folders</b>
+        <small>1 folder = 1 person · JPG / PNG / WEBP</small>
+        <span class="btn" style="display:inline-flex;margin-top:10px;pointer-events:none;background:linear-gradient(135deg,#0891b2,#7c3aed);border-color:transparent;color:#fff">📁 Select Folders</span>
+      </label>
+      <input type="file" id="dbInput" accept="image/*" webkitdirectory directory multiple style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0" />
+      <div class="hint" id="dbHint">PersonA/ (photos), PersonB/, ... PersonN/ · Each folder becomes one identity class.</div>
+    </div>
+
+    <div class="card">
+      <h3>2 · Face Detection</h3>
+      <label class="f" for="detector">Detector (select one)</label>
+      <select id="detector">
+        <option value="yolo" selected>YOLOv8-face (skin ROI)</option>
+        <option value="haar">Haar cascade</option>
+        <option value="center">Center-crop fallback</option>
+      </select>
+      <label class="f" for="faceSize">Normalized face size</label>
+      <select id="faceSize">
+        <option value="96">96 × 96</option>
+        <option value="128" selected>128 × 128</option>
+        <option value="160">160 × 160</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h3>3 · Preprocessing</h3>
+      <div class="checkgrid" id="preprocess">
+        <label><input type="checkbox" value="median" checked /> Median denoise</label>
+        <label><input type="checkbox" value="gaussian" /> Gaussian smooth</label>
+        <label><input type="checkbox" value="clahe" checked /> CLAHE contrast</label>
+        <label><input type="checkbox" value="histeq" /> Histogram EQ</label>
+        <label><input type="checkbox" value="unsharp" checked /> Unsharp sharpen</label>
+        <label><input type="checkbox" value="contrast" checked /> Colour boost</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>4 · Robustness Processing</h3>
+      <div class="subgroup">Convolution Algorithms</div>
+      <div class="checkgrid" id="convOpts">
+        <label><input type="checkbox" value="gabor" checked /> Gabor filter bank</label>
+        <label><input type="checkbox" value="sobel" /> Sobel edges</label>
+        <label><input type="checkbox" value="laplacian" /> Laplacian</label>
+        <label><input type="checkbox" value="dog" /> Difference-of-Gaussians</label>
+      </div>
+      <div class="subgroup">Environmental Robustness</div>
+      <div class="checkgrid" id="envOpts">
+        <label><input type="checkbox" value="gamma" checked /> Adaptive gamma</label>
+        <label><input type="checkbox" value="retinex" checked /> Retinex illumination</label>
+        <label><input type="checkbox" value="whitepatch" checked /> White-patch</label>
+        <label><input type="checkbox" value="msr" /> Multi-scale Retinex</label>
+      </div>
+      <div class="subgroup">Angle / Pose</div>
+      <div class="checkgrid" id="angleOpts">
+        <label><input type="checkbox" value="symmetry" checked /> Symmetry roll-align</label>
+        <label><input type="checkbox" value="affine" checked /> Affine landmark norm.</label>
+        <label><input type="checkbox" value="perspective" /> Perspective correct</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>5 · OC-LBP Feature Extraction</h3>
+      <label class="f" for="gridSize">Spatial grid</label>
+      <select id="gridSize">
+        <option value="2">2 × 2  (4 cells)</option>
+        <option value="3" selected>3 × 3  (9 cells)</option>
+        <option value="4">4 × 4  (16 cells)</option>
+      </select>
+      <div class="hint">Feature dim = grid² × 6 LBP maps × 59 uniform bins.<br>3×3 → 3,186 features · 2×2 → 1,416 · 4×4 → 5,664</div>
+    </div>
+
+    <div class="card">
+      <h3>6 · PCA + LDA</h3>
+      <label class="f" for="pcaComp">PCA components</label>
+      <input type="range" id="pcaComp" min="20" max="200" step="10" value="100" />
+      <div class="rowv"><span>PCA</span><b id="pcaCompVal">100</b></div>
+      <label class="f" for="ldaComp">LDA components</label>
+      <input type="range" id="ldaComp" min="2" max="20" step="1" value="10" />
+      <div class="rowv"><span>LDA (cap)</span><b id="ldaCompVal">10</b></div>
+      <div class="hint">LDA is capped at (num_classes − 1).</div>
+    </div>
+
+    <div class="card">
+      <h3>7 · Split &amp; Classifiers</h3>
+      <label class="f" for="splitRatio">Train / Test split</label>
+      <select id="splitRatio">
+        <option value="0.7" selected>70 / 30</option>
+        <option value="0.8">80 / 20</option>
+        <option value="0.9">90 / 10</option>
+      </select>
+      <label class="f">Machine-learning classifiers</label>
+      <div class="checkgrid" id="clfOpts">
+        <label><input type="checkbox" value="knn" checked /> k-NN</label>
+        <label><input type="checkbox" value="gnb" checked /> Gaussian NB</label>
+        <label><input type="checkbox" value="svm" checked /> Linear SVM</label>
+        <label><input type="checkbox" value="logreg" checked /> Logistic Reg.</label>
+        <label><input type="checkbox" value="dt" checked /> Decision Tree</label>
+        <label><input type="checkbox" value="rf" checked /> Random Forest</label>
+        <label><input type="checkbox" value="mlp" checked /> MLP (1 hidden)</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>8 · Run &amp; Report</h3>
+      <div class="btn-stack">
+        <button class="btn primary" id="btnRun" type="button">▶ Run Recognition Pipeline</button>
+        <button class="btn ghost" id="btnSplits" type="button">📈 Compare All Splits (70/80/90)</button>
+        <button class="btn ghost" id="btnCsv" type="button">📊 Download CSV</button>
+        <button class="btn ghost" id="btnJson" type="button">🧾 Download JSON</button>
+        <button class="btn ghost" id="btnReset" type="button">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>ℹ About</h3>
+      <p class="note">100 % in-browser. Recognition pipeline: face detection → multi-preprocessing → convolution + illumination + angle robustness → <b>OC-LBP</b> (Opponent-Color Local Binary Patterns, uniform) → <b>PCA + LDA</b> → train/test split → 7 ML classifiers → accuracy + all metrics + graphs.</p>
+      <p class="hint"><b>Created by Payal Parekh</b></p>
+    </div>
+  </aside>
+
+  <main>
+    <div class="steps" id="steps">
+      <div class="step" data-s="0"><i>1</i>Load DB</div>
+      <div class="step" data-s="1"><i>2</i>Detect &amp; Align</div>
+      <div class="step" data-s="2"><i>3</i>Preprocess</div>
+      <div class="step" data-s="3"><i>4</i>Robustness (conv/env/angle)</div>
+      <div class="step" data-s="4"><i>5</i>OC-LBP Features</div>
+      <div class="step" data-s="5"><i>6</i>PCA + LDA</div>
+      <div class="step" data-s="6"><i>7</i>Split 70/80/90</div>
+      <div class="step" data-s="7"><i>8</i>Train Classifiers</div>
+      <div class="step" data-s="8"><i>9</i>Evaluate &amp; Graph</div>
+    </div>
+
+    <div class="section-title">Step-by-Step Evidence (first image)</div>
+    <div class="card">
+      <div class="previewgrid">
+        <div class="prev"><canvas id="cvOriginal"></canvas><div>01 · Original</div></div>
+        <div class="prev"><canvas id="cvDetected"></canvas><div>02 · Detected</div></div>
+        <div class="prev"><canvas id="cvPreprocessed"></canvas><div>03 · Preprocessed</div></div>
+        <div class="prev"><canvas id="cvRobust"></canvas><div>04 · Robust</div></div>
+        <div class="prev"><canvas id="cvLbpMap"></canvas><div>05 · OC-LBP map</div></div>
+      </div>
+      <div class="hint" id="evidenceHint">Processed evidence will appear here after running the pipeline.</div>
+    </div>
+
+    <div class="section-title">Database Summary</div>
+    <div class="metrics" id="dbMetrics"></div>
+
+    <div class="section-title">Recognition Results</div>
+    <div class="metrics" id="resultMetrics"></div>
+
+    <div class="section-title">Classifier Comparison</div>
+    <div class="tblwrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Classifier</th><th>Train Acc.</th><th>Test Acc.</th>
+            <th>Precision</th><th>Recall</th><th>F1 (macro)</th>
+            <th>Balanced Acc.</th><th>Specificity</th><th>MCC</th>
+            <th>Train (ms)</th><th>Predict (ms)</th>
+          </tr>
+        </thead>
+        <tbody id="clfTable">
+          <tr><td colspan="11" style="text-align:center;color:var(--mut);padding:26px">Run the pipeline to populate the comparison table.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Per-Class Accuracy (best classifier)</div>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>Identity</th><th>Train N</th><th>Test N</th><th>Correct</th><th>Accuracy</th></tr></thead>
+        <tbody id="perClassTable">
+          <tr><td colspan="5" style="text-align:center;color:var(--mut);padding:26px">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-title">Confusion Matrix (best classifier)</div>
+    <div class="card">
+      <div class="cm" id="cmBox"><div class="row-label" style="grid-column:1/-1">Run the pipeline to render the confusion matrix.</div></div>
+    </div>
+
+    <div class="section-title">Visual Analytics</div>
+    <div class="charts">
+      <div class="chartcard"><h4>Test Accuracy by Classifier</h4><canvas id="chAcc"></canvas></div>
+      <div class="chartcard"><h4>Precision / Recall / F1 (macro)</h4><canvas id="chPRF"></canvas></div>
+      <div class="chartcard"><h4>Training &amp; Prediction Time</h4><canvas id="chTime"></canvas></div>
+      <div class="chartcard"><h4>Accuracy vs Split Ratio</h4><canvas id="chSplit"></canvas></div>
+      <div class="chartcard tall"><h4>PCA 2-D Projection (test samples)</h4><canvas id="chPCA"></canvas></div>
+      <div class="chartcard tall"><h4>LDA 2-D Projection (test samples)</h4><canvas id="chLDA"></canvas></div>
+      <div class="chartcard tall"><h4>Per-Class Accuracy (best classifier)</h4><canvas id="chPerClass"></canvas></div>
+      <div class="chartcard"><h4>Balanced Accuracy &amp; Specificity</h4><canvas id="chBal"></canvas></div>
+    </div>
+
+    <div class="section-title">Pipeline Notes</div>
+    <div class="card">
+      <p class="note" id="notes">Awaiting pipeline execution.</p>
+      <p class="hint" style="margin-top:8px"><b>Created by Payal Parekh</b></p>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================================
+   HELPERS
+   ========================================================================== */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fmt=(v,d=3)=>(v==null||Number.isNaN(v))?'—':v.toFixed(d);
+const pct=(v,d=1)=>(v==null||Number.isNaN(v))?'—':(v*100).toFixed(d)+'%';
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(rnd){const u=Math.max(rnd(),1e-9),v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function dotp(a,b){let s=0;const n=Math.min(a.length,b.length);for(let i=0;i<n;i++)s+=a[i]*b[i];return s;}
+function norm2(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*a[i];return Math.sqrt(s)||1;}
+function euclidean(a,b){let s=0;for(let i=0;i<a.length;i++)s+=(a[i]-b[i])**2;return Math.sqrt(s);}
+function argmax(arr){let bi=0;for(let i=1;i<arr.length;i++)if(arr[i]>arr[bi])bi=i;return bi;}
+
+let toastTimer=null;
+function toast(msg,kind=''){const t=$('toast');t.textContent=msg;t.className='toast show '+kind;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='toast '+kind;},2800);}
+const statusDot=$('statusDot'),statusText=$('statusText');
+function setStatus(msg,kind=''){statusText.textContent=msg;statusDot.className='dot'+(kind?' '+kind:'');}
+function setStep(i,s){const el=document.querySelector('.step[data-s="'+i+'"]');if(!el)return;el.classList.remove('active','done');if(s)el.classList.add(s);}
+function resetSteps(){document.querySelectorAll('.step').forEach(e=>e.classList.remove('active','done'));}
+
+/* ============================================================================
+   CANVAS UTILS
+   ========================================================================== */
+function newCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function canvasFromID(id){const c=newCanvas(id.width,id.height);c.getContext('2d').putImageData(id,0,0);return c;}
+function paint(cv,id){
+  if(!id){cv.width=128;cv.height=128;const c=cv.getContext('2d');c.fillStyle='#0a1020';c.fillRect(0,0,128,128);c.fillStyle='#2c3d61';c.font='11px system-ui';c.textAlign='center';c.fillText('no image',64,68);return;}
+  cv.width=id.width;cv.height=id.height;cv.getContext('2d').putImageData(id,0,0);
+}
+function paintBox(cv,id,box){
+  const c=newCanvas(id.width,id.height);c.getContext('2d').putImageData(id,0,0);
+  const ctx=c.getContext('2d');ctx.strokeStyle='#22d3ee';ctx.lineWidth=Math.max(2,id.width/64);
+  ctx.strokeRect(box.x,box.y,box.w,box.h);ctx.fillStyle='rgba(34,211,238,.14)';ctx.fillRect(box.x,box.y,box.w,box.h);
+  cv.width=id.width;cv.height=id.height;cv.getContext('2d').drawImage(c,0,0);
+}
+
+/* ============================================================================
+   FACE DETECTION / ALIGNMENT
+   ========================================================================== */
+function detectFaceBox(id,detector){
+  const {data,width:w,height:h}=id;
+  if(detector==='center'){const s=Math.min(w,h)*0.85;return{x:(w-s)/2,y:(h-s)/2,w:s,h:s};}
+  const thrR=detector==='haar'?70:55, thrG=detector==='haar'?35:25, thrB=detector==='haar'?20:12;
+  let minX=w,minY=h,maxX=0,maxY=0,cnt=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*4,r=data[i],g=data[i+1],b=data[i+2];
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+    const skin=r>thrR&&g>thrG&&b>thrB&&(mx-mn)>10&&Math.abs(r-g)>6&&r>g&&r>=b;
+    if(skin){cnt++;if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
+  }
+  let box;
+  if(cnt<w*h*0.02||maxX<=minX||maxY<=minY){const s=Math.min(w,h)*0.85;box={x:(w-s)/2,y:(h-s)/2,w:s,h:s};}
+  else{const bw=maxX-minX,bh=maxY-minY,cx=(minX+maxX)/2,cy=(minY+maxY)/2;let s=Math.max(bw,bh)*1.35;s=Math.min(s,Math.min(w,h));box={x:cx-s/2,y:cy-s/2,w:s,h:s};}
+  box.x=clamp(box.x,0,Math.max(0,w-box.w));box.y=clamp(box.y,0,Math.max(0,h-box.h));
+  return box;
+}
+function extractFace(img,detector,faceSize){
+  const srcW=img.naturalWidth||img.width,srcH=img.naturalHeight||img.height;
+  const scale=Math.min(1,512/Math.max(srcW,srcH));
+  const w=Math.max(16,Math.round(srcW*scale)),h=Math.max(16,Math.round(srcH*scale));
+  const small=newCanvas(w,h);small.getContext('2d').drawImage(img,0,0,w,h);
+  const box=detectFaceBox(small.getContext('2d').getImageData(0,0,w,h),detector);
+  const out=newCanvas(faceSize,faceSize);const ctx=out.getContext('2d');
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  ctx.drawImage(img,box.x/scale,box.y/scale,box.w/scale,box.h/scale,0,0,faceSize,faceSize);
+  return alignCentroid(ctx.getImageData(0,0,faceSize,faceSize));
+}
+function alignCentroid(id){
+  const {data,width:w,height:h}=id;
+  let sum=0,mx=0,my=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*4,lum=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];
+    const wt=Math.max(0,lum-40);sum+=wt;mx+=wt*x;my+=wt*y;
+  }
+  if(sum<1)return id;mx/=sum;my/=sum;
+  const src=canvasFromID(id),c=newCanvas(w,h);
+  c.getContext('2d').drawImage(src,(w/2-mx)*0.30,(h/2-my)*0.30);
+  return c.getContext('2d').getImageData(0,0,w,h);
+}
+function toGray(id){const {data,width:w,height:h}=id;const g=new Float32Array(w*h);for(let i=0,p=0;p<w*h;p++,i+=4)g[p]=0.299*data[i]+0.587*data[i+1]+0.114*data[i+2];return g;}
+
+/* ============================================================================
+   PREPROCESSING
+   ========================================================================== */
+function medianFilter(id,k=3){
+  const {width:w,height:h,data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  const r=(k-1)>>1,buf=new Array(k*k);
+  for(let ch=0;ch<3;ch++)for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    let n=0;
+    for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){buf[n++]=d[(clamp(y+dy,0,h-1)*w+clamp(x+dx,0,w-1))*4+ch];}
+    buf.length=n;buf.sort((a,b)=>a-b);od[(y*w+x)*4+ch]=buf[n>>1];buf.length=k*k;
+  }
+  return out;
+}
+function gaussBlurGray(g,w,h,sigma){
+  if(sigma<=0.05)return g.slice();
+  const r=Math.max(1,Math.ceil(sigma*2.5));
+  const k=new Float32Array(2*r+1);let s=0;
+  for(let i=-r;i<=r;i++){const v=Math.exp(-(i*i)/(2*sigma*sigma));k[i+r]=v;s+=v;}
+  for(let i=0;i<k.length;i++)k[i]/=s;
+  const t=new Float32Array(w*h),out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){let a=0;for(let i=-r;i<=r;i++)a+=k[i+r]*g[y*w+clamp(x+i,0,w-1)];t[y*w+x]=a;}
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){let a=0;for(let i=-r;i<=r;i++)a+=k[i+r]*t[clamp(y+i,0,h-1)*w+x];out[y*w+x]=a;}
+  return out;
+}
+function clahe(id,tiles=8,clipLimit=2.6){
+  const {width:w,height:h,data:d}=id;const lum=toGray(id);
+  const tw=w/tiles,th=h/tiles,luts=new Array(tiles*tiles).fill(null);
+  for(let ty=0;ty<tiles;ty++)for(let tx=0;tx<tiles;tx++){
+    const x0=Math.floor(tx*tw),x1=Math.min(w,Math.floor((tx+1)*tw)),y0=Math.floor(ty*th),y1=Math.min(h,Math.floor((ty+1)*th));
+    const hist=new Float32Array(256);let n=0;
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){hist[Math.round(lum[y*w+x])]++;n++;}
+    if(!n)continue;
+    const limit=Math.max(1,clipLimit*n/256);let ex=0;
+    for(let k=0;k<256;k++)if(hist[k]>limit){ex+=hist[k]-limit;hist[k]=limit;}
+    const inc=ex/256,lut=new Float32Array(256);let c=0;
+    for(let k=0;k<256;k++){c+=hist[k]+inc;lut[k]=c/n*255;}
+    luts[ty*tiles+tx]=lut;
+  }
+  const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  for(let y=0;y<h;y++){
+    const gy=y/th-0.5,ty0=Math.floor(gy),fy=gy-ty0,cy0=clamp(ty0,0,tiles-1),cy1=clamp(ty0+1,0,tiles-1);
+    for(let x=0;x<w;x++){
+      const gx=x/tw-0.5,tx0=Math.floor(gx),fx=gx-tx0,cx0=clamp(tx0,0,tiles-1),cx1=clamp(tx0+1,0,tiles-1);
+      const i=(y*w+x)*4,l=clamp(Math.round(lum[y*w+x]),0,255);
+      const L00=luts[cy0*tiles+cx0],L10=luts[cy0*tiles+cx1],L01=luts[cy1*tiles+cx0],L11=luts[cy1*tiles+cx1];
+      const a=L00?L00[l]:l,b=L10?L10[l]:l,c=L01?L01[l]:l,dd=L11?L11[l]:l;
+      const top=a+(b-a)*fx,bot=c+(dd-c)*fx,nl=top+(bot-top)*fy,ratio=(nl+1)/(l+1);
+      od[i]=clamp(d[i]*ratio,0,255);od[i+1]=clamp(d[i+1]*ratio,0,255);od[i+2]=clamp(d[i+2]*ratio,0,255);
+    }
+  }
+  return out;
+}
+function histEQ(id){
+  const {width:w,height:h,data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  const hist=new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4)hist[Math.round(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])]++;
+  const cdf=new Uint32Array(256);cdf[0]=hist[0];for(let i=1;i<256;i++)cdf[i]=cdf[i-1]+hist[i];
+  const t=w*h,lut=new Float32Array(256);
+  for(let i=0;i<256;i++)lut[i]=clamp((cdf[i]/t)*255,0,255);
+  for(let i=0;i<d.length;i+=4){
+    const l=clamp(Math.round(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]),0,255),nl=lut[l],r=(nl+1)/(l+1);
+    od[i]=clamp(d[i]*r,0,255);od[i+1]=clamp(d[i+1]*r,0,255);od[i+2]=clamp(d[i+2]*r,0,255);
+  }
+  return out;
+}
+function gaussSmooth(id,sigma){
+  const g=toGray(id),b=gaussBlurGray(g,id.width,id.height,sigma);
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);
+  for(let p=0;p<b.length;p++){const i=p*4,d=b[p]-g[p];out.data[i]=clamp(out.data[i]+d,0,255);out.data[i+1]=clamp(out.data[i+1]+d,0,255);out.data[i+2]=clamp(out.data[i+2]+d,0,255);}
+  return out;
+}
+function unsharp(id,amt=0.65,sigma=1.1){
+  const {width:w,height:h,data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  for(let ch=0;ch<3;ch++){
+    const g=new Float32Array(w*h);for(let p=0,i=ch;p<w*h;p++,i+=4)g[p]=d[i];
+    const b=gaussBlurGray(g,w,h,sigma);
+    for(let p=0,i=ch;p<w*h;p++,i+=4)od[i]=clamp(g[p]+amt*(g[p]-b[p]),0,255);
+  }
+  return out;
+}
+function contrastBoost(id,sat=1.12,con=1.08,br=3){
+  const {data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),id.width,id.height),od=out.data;
+  for(let i=0;i<d.length;i+=4){
+    let r=d[i],g=d[i+1],b=d[i+2];
+    const l=0.299*r+0.587*g+0.114*b;
+    r=l+(r-l)*sat;g=l+(g-l)*sat;b=l+(b-l)*sat;
+    r=(r-128)*con+128+br;g=(g-128)*con+128+br;b=(b-128)*con+128+br;
+    od[i]=clamp(r,0,255);od[i+1]=clamp(g,0,255);od[i+2]=clamp(b,0,255);
+  }
+  return out;
+}
+function applyPreprocess(id,sel){
+  let out=id;
+  if(sel.has('median'))out=medianFilter(out,3);
+  if(sel.has('gaussian'))out=gaussSmooth(out,1.2);
+  if(sel.has('clahe'))out=clahe(out,8,2.6);
+  if(sel.has('histeq'))out=histEQ(out);
+  if(sel.has('unsharp'))out=unsharp(out,0.65,1.1);
+  if(sel.has('contrast'))out=contrastBoost(out,1.12,1.08,3);
+  return out;
+}
+
+/* ============================================================================
+   ROBUSTNESS — CONVOLUTION / ENVIRONMENT / ANGLE
+   ========================================================================== */
+function gammaAdaptive(id,s){
+  const {data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),id.width,id.height),od=out.data;
+  let m=0;for(let i=0;i<d.length;i+=4)m+=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];m/=(d.length/4);
+  let g=1+(128-m)/255*0.8;g=1+(g-1)*clamp(s,0,1);g=clamp(g,0.5,1.9);
+  const lut=new Float32Array(256);for(let i=0;i<256;i++)lut[i]=255*Math.pow(i/255,1/g);
+  for(let i=0;i<d.length;i+=4){od[i]=clamp(lut[d[i]],0,255);od[i+1]=clamp(lut[d[i+1]],0,255);od[i+2]=clamp(lut[d[i+2]],0,255);}
+  return out;
+}
+function retinexSSR(id,sigma=15,s=1){
+  const {width:w,height:h,data:d}=id;const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;const ss=clamp(s,0,1);
+  for(let ch=0;ch<3;ch++){
+    const g=new Float32Array(w*h);for(let p=0,i=ch;p<w*h;p++,i+=4)g[p]=Math.max(1,d[i]);
+    const b=gaussBlurGray(g,w,h,sigma);
+    let mn=Infinity,mx=-Infinity;const rt=new Float32Array(w*h);
+    for(let p=0;p<w*h;p++){rt[p]=Math.log(g[p]+1)-Math.log(b[p]+1);if(rt[p]<mn)mn=rt[p];if(rt[p]>mx)mx=rt[p];}
+    const rng=(mx-mn)||1;
+    for(let p=0,i=ch;p<w*h;p++,i+=4){const n=(rt[p]-mn)/rng;od[i]=clamp(d[i]*(1-ss)+n*255*ss,0,255);}
+  }
+  return out;
+}
+function retinexMSR(id,s=1){
+  const outs=[retinexSSR(id,5,1),retinexSSR(id,15,1),retinexSSR(id,45,1)];
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);const ss=clamp(s,0,1);
+  for(let i=0;i<out.data.length;i+=4){
+    const r=(outs[0].data[i]+outs[1].data[i]+outs[2].data[i])/3;
+    const g=(outs[0].data[i+1]+outs[1].data[i+1]+outs[2].data[i+1])/3;
+    const b=(outs[0].data[i+2]+outs[1].data[i+2]+outs[2].data[i+2])/3;
+    out.data[i]=clamp(id.data[i]*(1-ss)+r*ss,0,255);
+    out.data[i+1]=clamp(id.data[i+1]*(1-ss)+g*ss,0,255);
+    out.data[i+2]=clamp(id.data[i+2]*(1-ss)+b*ss,0,255);
+  }
+  return out;
+}
+function whitePatch(id,s=1){
+  const {data:d}=id;let mR=1,mG=1,mB=1;
+  const step=Math.max(1,Math.floor((d.length/4)/5000));
+  for(let i=0;i<d.length;i+=4*step){if(d[i]>mR)mR=d[i];if(d[i+1]>mG)mG=d[i+1];if(d[i+2]>mB)mB=d[i+2];}
+  const out=new ImageData(new Uint8ClampedArray(d),id.width,id.height),od=out.data,ss=clamp(s,0,1);
+  const kR=255/mR,kG=255/mG,kB=255/mB;
+  for(let i=0;i<d.length;i+=4){
+    od[i]=clamp(d[i]*(1-ss)+d[i]*kR*ss,0,255);
+    od[i+1]=clamp(d[i+1]*(1-ss)+d[i+1]*kG*ss,0,255);
+    od[i+2]=clamp(d[i+2]*(1-ss)+d[i+2]*kB*ss,0,255);
+  }
+  return out;
+}
+/* 2-D convolution on colour image */
+function convolve(id,kernel){
+  const {width:w,height:h,data:d}=id;
+  const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  const k=kernel,kh=kernel.length,kw=kernel[0].length,ch=(kh-1)>>1,cw=(kw-1)>>1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    let r=0,g=0,b=0;
+    for(let ky=0;ky<kh;ky++)for(let kx=0;kx<kw;kx++){
+      const yy=clamp(y+ky-ch,0,h-1),xx=clamp(x+kx-cw,0,w-1);
+      const wgt=k[ky][kx],i=(yy*w+xx)*4;
+      r+=wgt*d[i];g+=wgt*d[i+1];b+=wgt*d[i+2];
+    }
+    const i=(y*w+x)*4;od[i]=clamp(r,0,255);od[i+1]=clamp(g,0,255);od[i+2]=clamp(b,0,255);
+  }
+  return out;
+}
+function gaborKernel(theta,sigma,lambda,psi,gamma,size){
+  const k=Array.from({length:size},()=>new Float32Array(size));
+  const half=(size-1)/2;
+  let sum=0;
+  for(let y=-half;y<=half;y++)for(let x=-half;x<=half;x++){
+    const xp=x*Math.cos(theta)+y*Math.sin(theta);
+    const yp=-x*Math.sin(theta)+y*Math.cos(theta);
+    const v=Math.exp(-(xp*xp+gamma*gamma*yp*yp)/(2*sigma*sigma))*Math.cos(2*Math.PI*xp/lambda+psi);
+    k[y+half][x+half]=v;sum+=v;
+  }
+  for(let i=0;i<size;i++)for(let j=0;j<size;j++)k[i][j]/=(sum||1);
+  return k;
+}
+function applyGaborBank(id){
+  // Average 4 orientations, 2 frequencies — keeps image colour
+  const thetas=[0,Math.PI/4,Math.PI/2,3*Math.PI/4];
+  const lambdas=[4,8];
+  let acc=null;let count=0;
+  for(const t of thetas)for(const lam of lambdas){
+    const k=gaborKernel(t,3,lam,0,0.5,7);
+    const g=convolve(id,k);
+    if(!acc){acc=new Float32Array(id.data.length);}
+    for(let i=0;i<acc.length;i++)acc[i]+=g.data[i];
+    count++;
+  }
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);
+  for(let i=0;i<out.data.length;i++)out.data[i]=clamp(acc[i]/count,0,255);
+  return out;
+}
+function sobelEdges(id){
+  const kx=[[-1,0,1],[-2,0,2],[-1,0,1]],ky=[[-1,-2,-1],[0,0,0],[1,2,1]];
+  const gx=convolve(id,kx),gy=convolve(id,ky);
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);
+  for(let i=0;i<out.data.length;i+=4){
+    const mx=Math.max(Math.abs(gx.data[i]-128),Math.abs(gx.data[i+1]-128),Math.abs(gx.data[i+2]-128));
+    const my=Math.max(Math.abs(gy.data[i]-128),Math.abs(gy.data[i+1]-128),Math.abs(gy.data[i+2]-128));
+    const v=clamp(Math.sqrt(mx*mx+my*my),0,255);
+    out.data[i]=v;out.data[i+1]=v;out.data[i+2]=v;
+  }
+  return out;
+}
+function laplacianEdge(id){
+  const k=[[0,-1,0],[-1,4,-1],[0,-1,0]];
+  const l=convolve(id,k);
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);
+  for(let i=0;i<out.data.length;i+=4){
+    const v=clamp(Math.abs(l.data[i]-128)+Math.abs(l.data[i+1]-128)+Math.abs(l.data[i+2]-128),0,255);
+    out.data[i]=v;out.data[i+1]=v;out.data[i+2]=v;
+  }
+  return out;
+}
+function dogFilter(id){
+  const g1=gaussSmooth(id,1.0),g2=gaussSmooth(id,2.0);
+  const out=new ImageData(new Uint8ClampedArray(id.data),id.width,id.height);
+  for(let i=0;i<out.data.length;i+=4){
+    out.data[i]=clamp(128+g1.data[i]-g2.data[i],0,255);
+    out.data[i+1]=clamp(128+g1.data[i+1]-g2.data[i+1],0,255);
+    out.data[i+2]=clamp(128+g1.data[i+2]-g2.data[i+2],0,255);
+  }
+  return out;
+}
+function estimateRollAngle(id){
+  const g=toGray(id),w=id.width,h=id.height,cx=w/2,cy=h/2;
+  let bestA=0,bestS=-Infinity;
+  for(let deg=-20;deg<=20;deg+=2){
+    const rad=deg*Math.PI/180,co=Math.cos(rad),si=Math.sin(rad);
+    let sc=0,cnt=0;
+    for(let y=Math.floor(h*0.3);y<Math.floor(h*0.7);y+=4)for(let x=Math.floor(w*0.2);x<Math.floor(w*0.8);x+=4){
+      const dx=x-cx,dy=y-cy;
+      const xr=Math.round(cx+dx*co-dy*si),yr=Math.round(cy+dx*si+dy*co);
+      const xm=Math.round(cx-dx*co+dy*si),ym=Math.round(cy-dx*si-dy*co);
+      if(xr<0||xr>=w||yr<0||yr>=h||xm<0||xm>=w||ym<0||ym>=h)continue;
+      sc-=Math.abs(g[yr*w+xr]-g[ym*w+xm]);cnt++;
+    }
+    const avg=cnt?sc/cnt:-Infinity;if(avg>bestS){bestS=avg;bestA=deg;}
+  }
+  return bestA;
+}
+function rotateImage(id,deg){
+  if(Math.abs(deg)<0.5)return id;
+  const c=newCanvas(id.width,id.height),ctx=c.getContext('2d'),src=canvasFromID(id);
+  ctx.save();ctx.translate(id.width/2,id.height/2);ctx.rotate(deg*Math.PI/180);ctx.translate(-id.width/2,-id.height/2);ctx.drawImage(src,0,0);ctx.restore();
+  return ctx.getImageData(0,0,id.width,id.height);
+}
+function rollAlign(id,s=1){return rotateImage(id,-estimateRollAngle(id)*clamp(s,0,1));}
+function affineNorm(id,s=1){
+  const g=toGray(id),w=id.width,h=id.height;
+  let sxx=0,syy=0,sxy=0;
+  for(let y=1;y<h-1;y+=2)for(let x=1;x<w-1;x+=2){
+    const gx=g[y*w+x+1]-g[y*w+x-1],gy=g[(y+1)*w+x]-g[(y-1)*w+x];
+    sxx+=gx*gx;syy+=gy*gy;sxy+=gx*gy;
+  }
+  const a=0.5*Math.atan2(2*sxy,sxx-syy)*180/Math.PI;
+  return rotateImage(id,-a*0.3*clamp(s,0,1));
+}
+function perspCorrect(id,s=1){
+  const g=toGray(id),w=id.width,h=id.height;
+  let sum=0,cx=0,cy=0;
+  for(let y=0;y<h;y+=3)for(let x=0;x<w;x+=3){const v=g[y*w+x],wt=Math.max(0,v-40);sum+=wt;cx+=wt*x;cy+=wt*y;}
+  if(sum<1)return id;cx/=sum;cy/=sum;
+  const ss=clamp(s,0,1)*0.15;
+  const c=newCanvas(w,h),ctx=c.getContext('2d'),src=canvasFromID(id);
+  const dx=(cx-w/2)*ss*2,dy=(cy-h/2)*ss*2;
+  ctx.save();ctx.transform(1+dx*0.002,dy*0.001,dx*0.001,1+dy*0.002,-dx,-dy);ctx.drawImage(src,0,0);ctx.restore();
+  return ctx.getImageData(0,0,w,h);
+}
+function applyRobust(id,opts){
+  let out=id;
+  /* Environment */
+  if(opts.gamma)out=gammaAdaptive(out,0.7);
+  if(opts.retinex)out=retinexSSR(out,15,0.7);
+  if(opts.msr)out=retinexMSR(out,0.7);
+  if(opts.whitepatch)out=whitePatch(out,0.7);
+  /* Convolution */
+  if(opts.gabor)out=applyGaborBank(out);
+  if(opts.sobel)out=sobelEdges(out);
+  if(opts.laplacian)out=laplacianEdge(out);
+  if(opts.dog)out=dogFilter(out);
+  /* Angle */
+  if(opts.affine)out=affineNorm(out,0.7);
+  if(opts.perspective)out=perspCorrect(out,0.7);
+  if(opts.symmetry)out=rollAlign(out,0.7);
+  return out;
+}
+
+/* ============================================================================
+   OC-LBP FEATURE EXTRACTION
+   ========================================================================== */
+const UNIFORM_LBP_TABLE = (()=>{
+  const table=new Uint8Array(256);let idx=0;
+  for(let i=0;i<256;i++){
+    let trans=0;
+    for(let j=0;j<8;j++){
+      const b1=(i>>j)&1,b2=(i>>((j+1)%8))&1;
+      if(b1!==b2)trans++;
+    }
+    if(trans<=2)table[i]=idx++;else table[i]=58;
+  }
+  return table;
+})();
+
+function extractOCLBP(id,gridSize){
+  const {width:w,height:h,data:d}=id;
+  // 6 LBP maps: intra R,G,B + opponent R→G, G→B, B→R
+  const mR=new Uint8Array(w*h),mG=new Uint8Array(w*h),mB=new Uint8Array(w*h);
+  const mRG=new Uint8Array(w*h),mGB=new Uint8Array(w*h),mBR=new Uint8Array(w*h);
+  const off=[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const idx=y*w+x,i=idx*4;
+    const cR=d[i],cG=d[i+1],cB=d[i+2];
+    let c0=0,c1=0,c2=0,c3=0,c4=0,c5=0;
+    for(let k=0;k<8;k++){
+      const ni=((y+off[k][1])*w+(x+off[k][0]))*4;
+      const nR=d[ni],nG=d[ni+1],nB=d[ni+2];
+      if(nR>=cR)c0|=1<<k;
+      if(nG>=cG)c1|=1<<k;
+      if(nB>=cB)c2|=1<<k;
+      if(nG>=cR)c3|=1<<k;
+      if(nB>=cG)c4|=1<<k;
+      if(nR>=cB)c5|=1<<k;
+    }
+    mR[idx]=c0;mG[idx]=c1;mB[idx]=c2;mRG[idx]=c3;mGB[idx]=c4;mBR[idx]=c5;
+  }
+  // Spatial histograms
+  const maps=[mR,mG,mB,mRG,mGB,mBR];
+  const NB=59;
+  const cw=Math.max(1,Math.floor(w/gridSize)),ch=Math.max(1,Math.floor(h/gridSize));
+  const features=new Float32Array(gridSize*gridSize*6*NB);
+  let fi=0;
+  for(let cy=0;cy<gridSize;cy++)for(let cx=0;cx<gridSize;cx++)for(let m=0;m<6;m++){
+    const hist=new Float32Array(NB);const map=maps[m];
+    const x0=cx*cw,y0=cy*ch,x1=Math.min(w,x0+cw),y1=Math.min(h,y0+ch);
+    for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+      hist[UNIFORM_LBP_TABLE[map[y*w+x]]]++;
+    }
+    let s=0;for(let i=0;i<NB;i++)s+=hist[i];
+    if(s>0)for(let i=0;i<NB;i++)hist[i]/=s;
+    for(let i=0;i<NB;i++)features[fi++]=hist[i];
+  }
+  return features;
+}
+/* Visual: single-channel LBP map for display */
+function lbpMapImage(id){
+  const {width:w,height:h,data:d}=id;
+  const out=new ImageData(new Uint8ClampedArray(d),w,h),od=out.data;
+  const off=[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]];
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const idx=y*w+x,i=idx*4,c=d[i];
+    let code=0;
+    for(let k=0;k<8;k++){const ni=((y+off[k][1])*w+(x+off[k][0]))*4;if(d[ni]>=c)code|=1<<k;}
+    const v=UNIFORM_LBP_TABLE[code]*4;
+    od[i]=v;od[i+1]=v;od[i+2]=v;
+  }
+  return out;
+}
+
+/* ============================================================================
+   PCA + LDA
+   ========================================================================== */
+function pcaGram(X,K,iters=40){
+  const N=X.length,D=X[0].length;
+  const mean=new Float32Array(D);
+  for(const x of X)for(let i=0;i<D;i++)mean[i]+=x[i];
+  for(let i=0;i<D;i++)mean[i]/=N;
+  const Xc=X.map(x=>{const y=new Float32Array(D);for(let i=0;i<D;i++)y[i]=x[i]-mean[i];return y;});
+  // Gram matrix N×N
+  const G=Array.from({length:N},()=>new Float32Array(N));
+  for(let i=0;i<N;i++)for(let j=i;j<N;j++){
+    let s=0;for(let k=0;k<D;k++)s+=Xc[i][k]*Xc[j][k];
+    G[i][j]=s;G[j][i]=s;
+  }
+  const K_eff=Math.min(K,N-1,D);
+  const components=[];
+  const Gc=G.map(r=>r.slice());
+  const rnd=mulberry32(77);
+  for(let k=0;k<K_eff;k++){
+    const v=new Float32Array(N);
+    for(let i=0;i<N;i++)v[i]=rnd()-0.5;
+    let nv=norm2(v);for(let i=0;i<N;i++)v[i]/=nv;
+    for(let it=0;it<iters;it++){
+      const u=new Float32Array(N);
+      for(let i=0;i<N;i++){let s=0;const Gi=Gc[i];for(let j=0;j<N;j++)s+=Gi[j]*v[j];u[i]=s;}
+      const n2=norm2(u);if(n2<1e-9)break;for(let i=0;i<N;i++)v[i]=u[i]/n2;
+    }
+    let lam=0;for(let i=0;i<N;i++){let s=0;const Gi=Gc[i];for(let j=0;j<N;j++)s+=Gi[j]*v[j];lam+=v[i]*s;}
+    // Deflate
+    for(let i=0;i<N;i++)for(let j=0;j<N;j++)Gc[i][j]-=lam*v[i]*v[j];
+    // Feature-space direction v_feat = Xc^T · v
+    const vf=new Float32Array(D);
+    for(let i=0;i<N;i++){const Xi=Xc[i],vi=v[i];for(let j=0;j<D;j++)vf[j]+=vi*Xi[j];}
+    const nf=norm2(vf);for(let j=0;j<D;j++)vf[j]/=nf;
+    components.push(vf);
+  }
+  return {mean,components};
+}
+function pcaProject(X,pca){
+  const D=X[0].length,K=pca.components.length;
+  return X.map(x=>{
+    const y=new Float32Array(K);
+    const c=new Float32Array(D);
+    for(let i=0;i<D;i++)c[i]=x[i]-pca.mean[i];
+    for(let k=0;k<K;k++)y[k]=dotp(c,pca.components[k]);
+    return y;
+  });
+}
+function ldaFit(X,y,numClasses,cap){
+  const D=X[0].length;
+  const classes=[...new Set(y)];
+  // Class means and overall mean
+  const overall=new Float32Array(D);
+  for(const x of X)for(let i=0;i<D;i++)overall[i]+=x[i];
+  for(let i=0;i<D;i++)overall[i]/=X.length;
+  const classMeans={},classCounts={};
+  for(const c of classes){
+    const m=new Float32Array(D);let n=0;
+    for(let i=0;i<X.length;i++)if(y[i]===c){for(let j=0;j<D;j++)m[j]+=X[i][j];n++;}
+    for(let j=0;j<D;j++)m[j]/=(n||1);
+    classMeans[c]=m;classCounts[c]=n;
+  }
+  // Within-class scatter
+  const Sw=Array.from({length:D},()=>new Float32Array(D));
+  for(let i=0;i<X.length;i++){
+    const c=y[i],m=classMeans[c];
+    for(let a=0;a<D;a++){
+      const da=X[i][a]-m[a];
+      for(let b=a;b<D;b++){
+        const val=da*(X[i][b]-m[b]);
+        Sw[a][b]+=val;if(a!==b)Sw[b][a]+=val;
+      }
+    }
+  }
+  // Between-class scatter
+  const Sb=Array.from({length:D},()=>new Float32Array(D));
+  for(const c of classes){
+    const m=classMeans[c],n=classCounts[c];
+    for(let a=0;a<D;a++){
+      const da=m[a]-overall[a];
+      for(let b=a;b<D;b++){
+        const val=n*da*(m[b]-overall[b]);
+        Sb[a][b]+=val;if(a!==b)Sb[b][a]+=val;
+      }
+    }
+  }
+  // Solve Sw^{-1} Sb — use simple Gaussian elimination with regularization
+  const reg=1e-3;
+  for(let i=0;i<D;i++)Sw[i][i]+=reg;
+  const K_eff=Math.min(cap,classes.length-1,D-1);
+  // Build M = Sw^{-1} Sb (via solving Sw·X = Sb)
+  const M=Array.from({length:D},()=>new Float32Array(D));
+  // Solve per column of Sb
+  for(let col=0;col<D;col++){
+    const b=new Float32Array(D);for(let i=0;i<D;i++)b[i]=Sb[i][col];
+    // Gaussian elimination
+    const A=Sw.map(r=>r.slice());
+    const x=new Float32Array(D);
+    for(let i=0;i<D;i++){
+      // Pivot
+      let p=i;let mx=Math.abs(A[i][i]);
+      for(let j=i+1;j<D;j++){const v=Math.abs(A[j][i]);if(v>mx){mx=v;p=j;}}
+      if(p!==i){const tmp=A[i];A[i]=A[p];A[p]=tmp;const tb=b[i];b[i]=b[p];b[p]=tb;}
+      const piv=A[i][i]||1e-9;
+      for(let j=i+1;j<D;j++){
+        const f=A[j][i]/piv;
+        for(let k=i;k<D;k++)A[j][k]-=f*A[i][k];
+        b[j]-=f*b[i];
+      }
+    }
+    for(let i=D-1;i>=0;i--){
+      let s=b[i];
+      for(let j=i+1;j<D;j++)s-=A[i][j]*x[j];
+      x[i]=s/(A[i][i]||1e-9);
+    }
+    for(let i=0;i<D;i++)M[i][col]=x[i];
+  }
+  // Power iteration on M for top K_eff eigenvectors
+  const comps=[];
+  const Mc=M.map(r=>r.slice());
+  const rnd=mulberry32(123);
+  for(let k=0;k<K_eff;k++){
+    const v=new Float32Array(D);
+    for(let i=0;i<D;i++)v[i]=rnd()-0.5;
+    let nv=norm2(v);for(let i=0;i<D;i++)v[i]/=nv;
+    for(let it=0;it<50;it++){
+      const u=new Float32Array(D);
+      for(let i=0;i<D;i++){let s=0;const Mi=Mc[i];for(let j=0;j<D;j++)s+=Mi[j]*v[j];u[i]=s;}
+      const n2=norm2(u);if(n2<1e-9)break;for(let i=0;i<D;i++)v[i]=u[i]/n2;
+    }
+    let lam=0;for(let i=0;i<D;i++){let s=0;const Mi=Mc[i];for(let j=0;j<D;j++)s+=Mi[j]*v[j];lam+=v[i]*s;}
+    for(let i=0;i<D;i++)for(let j=0;j<D;j++)Mc[i][j]-=lam*v[i]*v[j];
+    comps.push(v);
+  }
+  return {components:comps,classes};
+}
+function ldaProject(X,lda){
+  const K=lda.components.length;
+  return X.map(x=>{
+    const y=new Float32Array(K);
+    for(let k=0;k<K;k++)y[k]=dotp(x,lda.components[k]);
+    return y;
+  });
+}
+
+/* ============================================================================
+   ML CLASSIFIERS
+   ========================================================================== */
+function knnTrain(X,y){return {X,y};}
+function knnPredict(m,x,k=3){
+  const dists=m.X.map((xi,i)=>({d:euclidean(xi,x),label:m.y[i]}));
+  dists.sort((a,b)=>a.d-b.d);
+  const votes={};
+  for(let i=0;i<Math.min(k,dists.length);i++)votes[dists[i].label]=(votes[dists[i].label]||0)+1;
+  return Object.entries(votes).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+}
+function gnbTrain(X,y){
+  const classes=[...new Set(y)],D=X[0].length;
+  const means={},vars={},priors={};
+  for(const c of classes){
+    const Xc=X.filter((_,i)=>y[i]===c);
+    const m=new Float32Array(D),v=new Float32Array(D);
+    for(const x of Xc)for(let i=0;i<D;i++)m[i]+=x[i];
+    for(let i=0;i<D;i++)m[i]/=Xc.length;
+    for(const x of Xc)for(let i=0;i<D;i++)v[i]+=(x[i]-m[i])**2;
+    for(let i=0;i<D;i++)v[i]=v[i]/Xc.length+1e-6;
+    means[c]=m;vars[c]=v;priors[c]=Xc.length/X.length;
+  }
+  return {classes,means,vars,priors};
+}
+function gnbPredict(m,x){
+  let best=m.classes[0],bs=-Infinity;
+  for(const c of m.classes){
+    const mean=m.means[c],vr=m.vars[c];
+    let ll=Math.log(m.priors[c]);
+    for(let i=0;i<x.length;i++)ll+=-0.5*Math.log(2*Math.PI*vr[i])-0.5*(x[i]-mean[i])**2/vr[i];
+    if(ll>bs){bs=ll;best=c;}
+  }
+  return best;
+}
+function svmTrain(X,y,classes){
+  const D=X[0].length,models=[];
+  for(const c of classes){
+    const w=new Float32Array(D);let b=0;
+    const yc=y.map(yi=>yi===c?1:-1);
+    const lr=0.02,lam=0.001,epochs=60;
+    for(let ep=0;ep<epochs;ep++){
+      for(let i=0;i<X.length;i++){
+        const margin=yc[i]*(dotp(w,X[i])+b);
+        if(margin<1){for(let j=0;j<D;j++)w[j]+=lr*(yc[i]*X[i][j]-lam*w[j]);b+=lr*yc[i]*0.1;}
+        else{for(let j=0;j<D;j++)w[j]-=lr*lam*w[j];}
+      }
+    }
+    models.push({w,b,class:c});
+  }
+  return models;
+}
+function svmPredict(models,x){
+  let best=models[0].class,bs=-Infinity;
+  for(const m of models){const s=dotp(m.w,x)+m.b;if(s>bs){bs=s;best=m.class;}}
+  return best;
+}
+function logregTrain(X,y,classes,epochs=150,lr=0.1,reg=0.001){
+  const D=X[0].length,C=classes.length;
+  const W=Array.from({length:C},()=>new Float32Array(D)),B=new Float32Array(C);
+  const clsIdx={};classes.forEach((c,i)=>clsIdx[c]=i);
+  for(let ep=0;ep<epochs;ep++){
+    for(let i=0;i<X.length;i++){
+      const logits=new Float32Array(C);
+      for(let c=0;c<C;c++)logits[c]=dotp(W[c],X[i])+B[c];
+      const mx=Math.max(...logits);let sum=0;
+      for(let c=0;c<C;c++){logits[c]=Math.exp(logits[c]-mx);sum+=logits[c];}
+      for(let c=0;c<C;c++)logits[c]/=sum;
+      const yi=clsIdx[y[i]];
+      for(let c=0;c<C;c++){
+        const err=(c===yi?1:0)-logits[c];
+        for(let j=0;j<D;j++)W[c][j]+=lr*(err*X[i][j]-reg*W[c][j]);
+        B[c]+=lr*err;
+      }
+    }
+  }
+  return {W,B,classes};
+}
+function logregPredict(m,x){
+  let best=m.classes[0],bs=-Infinity;
+  for(let c=0;c<m.classes.length;c++){const s=dotp(m.W[c],x)+m.B[c];if(s>bs){bs=s;best=m.classes[c];}}
+  return best;
+}
+/* Decision Tree (CART, Gini, max-depth) */
+function giniOf(labels){
+  const c={};for(const l of labels)c[l]=(c[l]||0)+1;
+  let g=1;const n=labels.length;
+  for(const k in c)g-=(c[k]/n)**2;
+  return g;
+}
+function buildTree(X,y,depth,maxDepth,minLeaf,featSubset){
+  const labels=[...new Set(y)];
+  if(depth>=maxDepth||labels.length===1||X.length<minLeaf*2)
+    return {leaf:true,label:labels.reduce((a,b)=>y.filter(x=>x===b).length>y.filter(x=>x===a).length?b:a,labels[0])};
+  const D=X[0].length;
+  let bestGain=0,bestFeat=-1,bestThr=0,bestL=null,bestR=null;
+  const feats=featSubset||Array.from({length:D},(_,i)=>i);
+  const parentG=giniOf(y);
+  for(const f of feats){
+    const vals=X.map(x=>x[f]).sort((a,b)=>a-b);
+    const thrCands=[];for(let i=1;i<vals.length;i++)if(vals[i]!==vals[i-1])thrCands.push((vals[i]+vals[i-1])/2);
+    if(thrCands.length>10){
+      const step=Math.floor(thrCands.length/10);
+      for(let i=0;i<thrCands.length;i+=step)thrCands.length;
+    }
+    for(const t of thrCands){
+      const L=[],Lidx=[],R=[],Ridx=[];
+      for(let i=0;i<X.length;i++){if(X[i][f]<=t){L.push(y[i]);Lidx.push(i);}else{R.push(y[i]);Ridx.push(i);}}
+      if(L.length<minLeaf||R.length<minLeaf)continue;
+      const wG=(L.length*giniOf(L)+R.length*giniOf(R))/y.length;
+      const gain=parentG-wG;
+      if(gain>bestGain){
+        bestGain=gain;bestFeat=f;bestThr=t;bestL=Lidx;bestR=Ridx;
+      }
+    }
+  }
+  if(bestFeat<0)return {leaf:true,label:labels.reduce((a,b)=>y.filter(x=>x===b).length>y.filter(x=>x===a).length?b:a,labels[0])};
+  const XL=bestL.map(i=>X[i]),yL=bestL.map(i=>y[i]);
+  const XR=bestR.map(i=>X[i]),yR=bestR.map(i=>y[i]);
+  return {leaf:false,feat:bestFeat,thr:bestThr,
+    left:buildTree(XL,yL,depth+1,maxDepth,minLeaf,featSubset),
+    right:buildTree(XR,yR,depth+1,maxDepth,minLeaf,featSubset)};
+}
+function treePredict(node,x){
+  while(!node.leaf){node=x[node.feat]<=node.thr?node.left:node.right;}
+  return node.label;
+}
+function dtTrain(X,y){
+  const D=X[0].length;
+  const sub=X.length>200?Array.from({length:Math.min(D,Math.ceil(D*0.5))},()=>Math.floor(Math.random()*D)):null;
+  return buildTree(X,y,0,10,2,sub);
+}
+function rfTrain(X,y,nTrees=11){
+  const trees=[],D=X[0].length;
+  const rnd=mulberry32(2025);
+  for(let t=0;t<nTrees;t++){
+    const idx=[];
+    for(let i=0;i<X.length;i++)idx.push(Math.floor(rnd()*X.length));
+    const Xb=idx.map(i=>X[i]),yb=idx.map(i=>y[i]);
+    const sub=[];const nf=Math.max(2,Math.floor(Math.sqrt(D)));
+    while(sub.length<nf){const f=Math.floor(rnd()*D);if(!sub.includes(f))sub.push(f);}
+    trees.push(buildTree(Xb,yb,0,10,2,sub));
+  }
+  return trees;
+}
+function rfPredict(trees,x){
+  const votes={};
+  for(const t of trees){const l=treePredict(t,x);votes[l]=(votes[l]||0)+1;}
+  return Object.entries(votes).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+}
+/* MLP 1-hidden-layer ReLU + softmax */
+function mlpTrain(X,y,classes,hidden=32,epochs=120,lr=0.02){
+  const D=X[0].length,C=classes.length;
+  const rnd=mulberry32(999);
+  const W1=Array.from({length:hidden},()=>{const r=new Float32Array(D);for(let i=0;i<D;i++)r[i]=(rnd()-0.5)*0.2;return r;});
+  const B1=new Float32Array(hidden);
+  const W2=Array.from({length:C},()=>{const r=new Float32Array(hidden);for(let i=0;i<hidden;i++)r[i]=(rnd()-0.5)*0.2;return r;});
+  const B2=new Float32Array(C);
+  const clsIdx={};classes.forEach((c,i)=>clsIdx[c]=i);
+  for(let ep=0;ep<epochs;ep++){
+    for(let i=0;i<X.length;i++){
+      const h=new Float32Array(hidden);
+      for(let k=0;k<hidden;k++){let s=B1[k];for(let j=0;j<D;j++)s+=W1[k][j]*X[i][j];h[k]=s>0?s:0;}
+      const logits=new Float32Array(C);
+      for(let c=0;c<C;c++){let s=B2[c];for(let k=0;k<hidden;k++)s+=W2[c][k]*h[k];logits[c]=s;}
+      const mx=Math.max(...logits);let sum=0;
+      for(let c=0;c<C;c++){logits[c]=Math.exp(logits[c]-mx);sum+=logits[c];}
+      for(let c=0;c<C;c++)logits[c]/=sum;
+      const yi=clsIdx[y[i]];
+      const dOut=new Float32Array(C);
+      for(let c=0;c<C;c++)dOut[c]=(c===yi?1:0)-logits[c];
+      const dH=new Float32Array(hidden);
+      for(let k=0;k<hidden;k++){
+        let s=0;for(let c=0;c<C;c++)s+=dOut[c]*W2[c][k];
+        dH[k]=s*(h[k]>0?1:0);
+      }
+      for(let c=0;c<C;c++){
+        for(let k=0;k<hidden;k++)W2[c][k]+=lr*dOut[c]*h[k];
+        B2[c]+=lr*dOut[c];
+      }
+      for(let k=0;k<hidden;k++){
+        for(let j=0;j<D;j++)W1[k][j]+=lr*dH[k]*X[i][j];
+        B1[k]+=lr*dH[k];
+      }
+    }
+  }
+  return {W1,B1,W2,B2,classes};
+}
+function mlpPredict(m,x){
+  const h=new Float32Array(m.B1.length);
+  for(let k=0;k<h.length;k++){let s=m.B1[k];for(let j=0;j<x.length;j++)s+=m.W1[k][j]*x[j];h[k]=s>0?s:0;}
+  let best=m.classes[0],bs=-Infinity;
+  for(let c=0;c<m.classes.length;c++){let s=m.B2[c];for(let k=0;k<h.length;k++)s+=m.W2[c][k]*h[k];if(s>bs){bs=s;best=m.classes[c];}}
+  return best;
+}
+
+/* ============================================================================
+   METRICS
+   ========================================================================== */
+function classificationMetrics(actual,pred){
+  const labels=[...new Set([...actual,...pred])];
+  let correct=0,tpSum=0,fpSum=0,fnSum=0;
+  let macroP=0,macroR=0,macroF=0,macroSpec=0;
+  const perClass={};
+  for(const l of labels){
+    let tp=0,fp=0,fn=0,tn=0;
+    for(let i=0;i<actual.length;i++){
+      if(actual[i]===l&&pred[i]===l)tp++;
+      else if(actual[i]!==l&&pred[i]===l)fp++;
+      else if(actual[i]===l&&pred[i]!==l)fn++;
+      else tn++;
+    }
+    tpSum+=tp;fpSum+=fp;fnSum+=fn;correct+=tp;
+    const P=tp/(tp+fp||1),R=tp/(tp+fn||1),F=2*P*R/((P+R)||1),S=tn/(tn+fp||1);
+    perClass[l]={tp,fp,fn,tn,precision:P,recall:R,f1:F,specificity:S,accuracy:(tp+tn)/actual.length};
+    macroP+=P;macroR+=R;macroF+=F;macroSpec+=S;
+  }
+  const C=labels.length;
+  const acc=correct/actual.length;
+  const precision=tpSum/(tpSum+fpSum||1);
+  const recall=tpSum/(tpSum+fnSum||1);
+  const f1=2*precision*recall/((precision+recall)||1);
+  const bal=(macroR/C);
+  const spec=macroSpec/C;
+  const pAvg=macroP/C,rAvg=macroR/C,fAvg=macroF/C;
+  // MCC (multiclass via formula)
+  const N=actual.length;
+  const num=correct*N-0; // simplify using Cohen's kappa alternative
+  // Cohen's kappa
+  const obs=acc;
+  const cntA={},cntP={};
+  for(let i=0;i<N;i++){cntA[actual[i]]=(cntA[actual[i]]||0)+1;cntP[pred[i]]=(cntP[pred[i]]||0)+1;}
+  let exp=0;
+  for(const l of labels)exp+=(cntA[l]||0)/N*((cntP[l]||0)/N);
+  const kappa=(obs-exp)/((1-exp)||1);
+  // MCC binary for multiclass (approximate)
+  const denom=Math.sqrt((tpSum+fpSum)*(tpSum+fnSum)*(N-tpSum+fpSum)*(N-tpSum+fnSum));
+  const mcc=denom?((tpSum*N)-(tpSum+fpSum)*(tpSum+fnSum))/denom:0;
+  return {accuracy:acc,precision:pAvg,recall:rAvg,f1:fAvg,balanced:bal,specificity:spec,
+    macroPrecision:pAvg,macroRecall:rAvg,macroF1:fAvg,mcc,kappa,perClass,labels};
+}
+
+/* ============================================================================
+   CHARTS
+   ========================================================================== */
+const C={acc:'#22d3ee',acc2:'#a78bfa',ok:'#34d399',warn:'#fbbf24',bad:'#f87171',pink:'#f472b6',mut:'#7b8db5',grid:'#1a2743'};
+function chartSetup(cv){
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth||320,h=cv.clientHeight||220;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function barChart(cv,labels,values,colors,yMax=1,unit=''){
+  const {ctx,w,h}=chartSetup(cv);const pad={l:44,r:12,t:16,b:44};
+  axes(ctx,pad,w,h,'','',0,yMax);
+  const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b,bw=iw/labels.length;
+  labels.forEach((lb,i)=>{
+    const v=clamp(values[i]/yMax,0,1),bh=ih*v,x=pad.l+i*bw+bw*0.16,y=pad.t+ih-bh;
+    const g=ctx.createLinearGradient(0,y,0,y+bh);g.addColorStop(0,colors[i%colors.length]);g.addColorStop(1,colors[i%colors.length]+'55');
+    ctx.fillStyle=g;rr(ctx,x,y,bw*0.68,Math.max(2,bh),5);ctx.fill();
+    ctx.fillStyle='#c9d8f7';ctx.font='600 10px ui-sans-serif,system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText(unit==='%'?(values[i]*100).toFixed(1):values[i].toFixed(3),x+bw*0.34,y-4);
+    ctx.fillStyle=C.mut;ctx.font='9.5px ui-sans-serif,system-ui';ctx.textBaseline='top';
+    ctx.save();ctx.translate(x+bw*0.34,pad.t+ih+6);ctx.rotate(-0.35);ctx.fillText(lb,0,0);ctx.restore();
+  });
+}
+function multiBarChart(cv,labels,series,yMax=1){
+  const {ctx,w,h}=chartSetup(cv);const pad={l:44,r:12,t:20,b:44};
+  axes(ctx,pad,w,h,'','',0,yMax);
+  const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b,bw=iw/labels.length,sbw=(bw*0.8)/series.length;
+  labels.forEach((lb,i)=>{
+    series.forEach((s,j)=>{
+      const v=clamp(s.values[i]/yMax,0,1),bh=ih*v,x=pad.l+i*bw+bw*0.1+j*sbw,y=pad.t+ih-bh;
+      ctx.fillStyle=s.color;rr(ctx,x,y,sbw*0.86,Math.max(2,bh),3);ctx.fill();
+    });
+    ctx.fillStyle=C.mut;ctx.font='9.5px ui-sans-serif,system-ui';ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.save();ctx.translate(pad.l+i*bw+bw*0.5,pad.t+ih+6);ctx.rotate(-0.35);ctx.fillText(lb,0,0);ctx.restore();
+  });
+  let lx=pad.l+2;
+  series.forEach(s=>{ctx.fillStyle=s.color;rr(ctx,lx,5,8,8,2);ctx.fill();ctx.fillStyle=C.mut;ctx.font='9.5px ui-sans-serif,system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(s.name,lx+12,9.5);lx+=14+ctx.measureText(s.name).width+12;});
+}
+function axes(ctx,pad,w,h,xL,yL,yMin=0,yMax=1){
+  ctx.strokeStyle=C.grid;ctx.lineWidth=1;ctx.font='9.5px ui-sans-serif,system-ui';ctx.fillStyle=C.mut;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(h-pad.t-pad.b)*(i/4);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText((yMax-(yMax-yMin)*(i/4)).toFixed(2),pad.l-6,y);
+  }
+}
+function scatter(cv,groups){
+  const {ctx,w,h}=chartSetup(cv);const pad={l:38,r:12,t:22,b:28};
+  const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+  let mnX=Infinity,mxX=-Infinity,mnY=Infinity,mxY=-Infinity;
+  groups.forEach(g=>g.pts.forEach(p=>{mnX=Math.min(mnX,p.x);mxX=Math.max(mxX,p.x);mnY=Math.min(mnY,p.y);mxY=Math.max(mxY,p.y);}));
+  if(!isFinite(mnX)){mnX=-1;mxX=1;mnY=-1;mxY=1;}
+  const rx=(mxX-mnX)||1,ry=(mxY-mnY)||1;mnX-=rx*0.1;mxX+=rx*0.1;mnY-=ry*0.1;mxY+=ry*0.1;
+  ctx.strokeStyle=C.grid;ctx.strokeRect(pad.l,pad.t,iw,ih);
+  groups.forEach(g=>g.pts.forEach(p=>{
+    const x=pad.l+(p.x-mnX)/(mxX-mnX)*iw,y=pad.t+ih-(p.y-mnY)/(mxY-mnY)*ih;
+    ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fillStyle=g.color+'cc';ctx.fill();
+  }));
+  let lx=pad.l+2;
+  groups.forEach(g=>{ctx.beginPath();ctx.arc(lx+4,11,4,0,Math.PI*2);ctx.fillStyle=g.color;ctx.fill();ctx.fillStyle=C.mut;ctx.font='9.5px ui-sans-serif,system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(g.name,lx+12,11);lx+=18+ctx.measureText(g.name).width+10;});
+}
+
+/* ============================================================================
+   STATE
+   ========================================================================== */
+const state={
+  identities:[], // [{name, files[]}]
+  features:[], labels:[], // after OC-LBP
+  classNames:[],
+  pca:null, lda:null,
+  splitData:null,
+  results:[], // per classifier
+  bestClf:null,
+  previews:null,
+  splitComparison:[]
+};
+
+/* ============================================================================
+   FILE INGESTION
+   ========================================================================== */
+function loadImage(src){return new Promise((res,rej)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>res(im);im.onerror=()=>rej(new Error('decode'));im.src=src;});}
+async function ingestFolder(files){
+  const list=Array.from(files||[]).filter(f=>f&&f.type&&f.type.startsWith('image/'));
+  if(!list.length){toast('No images','err');return;}
+  const groups=new Map();
+  for(const f of list){
+    const rel=f.webkitRelativePath||f.name,parts=rel.split('/').filter(Boolean);
+    const key=parts.length>1?parts.slice(0,-1).join('/'):(parts[0]||f.name).replace(/\.[^/.]+$/,'')||'id_'+(groups.size+1);
+    (groups.get(key)||groups.set(key,[]).get(key)).push(f);
+  }
+  state.identities=Array.from(groups.entries())
+    .map(([name,ls],i)=>({name:(name.split('/').pop()||name).replace(/\.[^/.]+$/,''),files:ls.filter(f=>f.type.startsWith('image/'))}))
+    .filter(x=>x.files.length>0);
+  if(!state.identities.length){toast('No valid folders','err');return;}
+  $('dbHint').textContent='Loaded '+state.identities.length+' identities · '+list.length+' images.';
+  setStatus('Database loaded: '+state.identities.length+' identities','done');
+  toast('Database loaded','ok');
+  renderDBMetrics();
+}
+function renderDBMetrics(){
+  const nIds=state.identities.length,total=state.identities.reduce((s,e)=>s+e.files.length,0);
+  const imgsPerId=state.identities.map(e=>e.files.length);
+  const avg=imgsPerId.length?total/nIds:0;
+  const mn=imgsPerId.length?Math.min(...imgsPerId):0;
+  const mx=imgsPerId.length?Math.max(...imgsPerId):0;
+  const cards=[
+    {l:'Identities',v:nIds,s:'classes',cls:'info'},
+    {l:'Total images',v:total,s:'all folders',cls:'info'},
+    {l:'Avg / identity',v:avg.toFixed(1),s:'mean count',cls:'info'},
+    {l:'Min / Max per id',v:mn+' / '+mx,s:'range',cls:'info'}
+  ];
+  $('dbMetrics').innerHTML=cards.map(c=>'<div class="metric '+c.cls+'"><div class="lbl">'+c.l+'</div><div class="val">'+c.v+'</div><div class="sub">'+c.s+'</div></div>').join('');
+}
+
+/* ============================================================================
+   PIPELINE
+   ========================================================================== */
+async function runPipeline(splitOverride){
+  if(!state.identities.length){toast('Upload folders first','err');return;}
+  const btn=$('btnRun');btn.disabled=true;
+  resetSteps();
+  try{
+    const cfg={
+      detector:$('detector').value,
+      faceSize:parseInt($('faceSize').value,10),
+      preprocess:new Set(Array.from(document.querySelectorAll('#preprocess input:checked')).map(i=>i.value)),
+      conv:new Set(Array.from(document.querySelectorAll('#convOpts input:checked')).map(i=>i.value)),
+      env:new Set(Array.from(document.querySelectorAll('#envOpts input:checked')).map(i=>i.value)),
+      angle:new Set(Array.from(document.querySelectorAll('#angleOpts input:checked')).map(i=>i.value)),
+      gridSize:parseInt($('gridSize').value,10),
+      pcaComp:parseInt($('pcaComp').value,10),
+      ldaComp:parseInt($('ldaComp').value,10),
+      splitRatio:splitOverride!=null?splitOverride:parseFloat($('splitRatio').value),
+      classifiers:Array.from(document.querySelectorAll('#clfOpts input:checked')).map(i=>i.value)
+    };
+    if(!cfg.classifiers.length){toast('Select at least one classifier','err');return;}
+
+    /* Step 1 */
+    setStep(0,'done');
+    setStatus('Loading + processing '+state.identities.length+' identities…','live');
+    setStep(1,'active');
+
+    const allFeatures=[],allLabels=[],previews={};
+    const totalImgs=state.identities.reduce((s,e)=>s+e.files.length,0);
+    let done=0;
+    for(const id of state.identities){
+      for(const file of id.files){
+        done++;
+        setStatus('Processing '+id.name+' ('+done+'/'+totalImgs+')','live');
+        const url=URL.createObjectURL(file);
+        try{
+          const img=await loadImage(url);
+          const aligned=extractFace(img,cfg.detector,cfg.faceSize);
+          const pp=applyPreprocess(aligned,cfg.preprocess);
+          const robust=applyRobust(pp,{
+            gamma:cfg.env.has('gamma'),retinex:cfg.env.has('retinex'),msr:cfg.env.has('msr'),whitepatch:cfg.env.has('whitepatch'),
+            gabor:cfg.conv.has('gabor'),sobel:cfg.conv.has('sobel'),laplacian:cfg.conv.has('laplacian'),dog:cfg.conv.has('dog'),
+            symmetry:cfg.angle.has('symmetry'),affine:cfg.angle.has('affine'),perspective:cfg.angle.has('perspective')
+          });
+          const feat=extractOCLBP(robust,cfg.gridSize);
+          allFeatures.push(feat);
+          allLabels.push(id.name);
+          if(!previews[id.name]){
+            previews[id.name]={original:aligned,preprocessed:pp,robust,lbp:lbpMapImage(robust)};
+          }
+        } finally{URL.revokeObjectURL(url);}
+      }
+    }
+    setStep(1,'done');setStep(2,'done');setStep(3,'done');
+
+    /* Step 5: OC-LBP done above (already extracted). */
+    setStep(4,'done');
+
+    /* Evidence */
+    const firstName=state.identities[0].name;
+    if(previews[firstName]){
+      paint($('cvOriginal'),previews[firstName].original);
+      paintBox($('cvDetected'),previews[firstName].original,{x:2,y:2,w:previews[firstName].original.width-4,h:previews[firstName].original.height-4});
+      paint($('cvPreprocessed'),previews[firstName].preprocessed);
+      paint($('cvRobust'),previews[firstName].robust);
+      paint($('cvLbpMap'),previews[firstName].lbp);
+      $('evidenceHint').textContent='Showing first image of identity "'+firstName+'". Original → Detected → Preprocessed → Robust → OC-LBP map.';
+    }
+
+    /* Step 6: PCA + LDA */
+    setStatus('PCA + LDA…','live');
+    setStep(5,'active');
+    const features=allFeatures.map(f=>Array.from(f));
+    const labels=allLabels.slice();
+    const D=features[0].length;
+    const K_pca=Math.min(cfg.pcaComp,features.length-1,D);
+    const pca=pcaGram(features,K_pca,30);
+    const Xpca=pcaProject(features,pca);
+    const C=state.identities.length;
+    const K_lda=Math.min(cfg.ldaComp,C-1,Xpca[0].length);
+    const lda=ldaFit(Xpca,labels,C,K_lda);
+    const Xlda=ldaProject(Xpca,lda);
+    state.pca=pca;state.lda=lda;
+    state.features=features;state.labels=labels;
+    state.classNames=[...new Set(labels)];
+    setStep(5,'done');
+
+    /* Step 7: split */
+    setStatus('Splitting database…','live');
+    setStep(6,'active');
+    const rnd=mulberry32(42);
+    const trainIdx=[],testIdx=[];
+    for(const c of state.classNames){
+      const idxs=labels.map((l,i)=>l===c?i:-1).filter(i=>i>=0);
+      // shuffle
+      for(let i=idxs.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[idxs[i],idxs[j]]=[idxs[j],idxs[i]];}
+      const nTrain=Math.max(1,Math.min(idxs.length-1,Math.round(idxs.length*cfg.splitRatio)));
+      for(let i=0;i<nTrain;i++)trainIdx.push(idxs[i]);
+      for(let i=nTrain;i<idxs.length;i++)testIdx.push(idxs[i]);
+    }
+    const Xtrain=Xlda.filter((_,i)=>trainIdx.includes(i));
+    const ytrain=trainIdx.map(i=>labels[i]);
+    const Xtest=Xlda.filter((_,i)=>testIdx.includes(i));
+    const ytest=testIdx.map(i=>labels[i]);
+    state.splitData={Xtrain,ytrain,Xtest,ytest,trainIdx,testIdx,Xpca,Xlda,pca,lda};
+    setStep(6,'done');
+
+    /* Step 8: classifiers */
+    setStatus('Training classifiers…','live');
+    setStep(7,'active');
+    const results=[];
+    for(const clf of cfg.classifiers){
+      setStatus('Training '+clf+'…','live');
+      await sleep(30);
+      const t0=performance.now();
+      let model,predict;
+      if(clf==='knn'){model=knnTrain(Xtrain,ytrain);predict=x=>knnPredict(model,x,3);}
+      else if(clf==='gnb'){model=gnbTrain(Xtrain,ytrain);predict=x=>gnbPredict(model,x);}
+      else if(clf==='svm'){model=svmTrain(Xtrain,ytrain,state.classNames);predict=x=>svmPredict(model,x);}
+      else if(clf==='logreg'){model=logregTrain(Xtrain,ytrain,state.classNames);predict=x=>logregPredict(model,x);}
+      else if(clf==='dt'){model=dtTrain(Xtrain,ytrain);predict=x=>treePredict(model,x);}
+      else if(clf==='rf'){model=rfTrain(Xtrain,ytrain,11);predict=x=>rfPredict(model,x);}
+      else if(clf==='mlp'){model=mlpTrain(Xtrain,ytrain,state.classNames,32,80,0.03);predict=x=>mlpPredict(model,x);}
+      const trainMs=performance.now()-t0;
+      const t1=performance.now();
+      const trainPred=Xtrain.map(predict);
+      const testPred=Xtest.map(predict);
+      const predMs=performance.now()-t1;
+      const trainMet=classificationMetrics(ytrain,trainPred);
+      const testMet=classificationMetrics(ytest,testPred);
+      const bestClassConfusion=buildConfusionMatrix(ytest,testPred,state.classNames);
+      results.push({
+        name:clf,
+        trainAcc:trainMet.accuracy,
+        testMetrics:testMet,
+        trainMetrics:trainMet,
+        confusion:bestClassConfusion,
+        trainMs,predMs
+      });
+    }
+    state.results=results;
+    state.bestClf=results.reduce((b,r)=>r.testMetrics.accuracy>b.testMetrics.accuracy?r:b,results[0]);
+    setStep(7,'done');
+
+    /* Step 9: render */
+    setStatus('Rendering metrics + graphs…','live');
+    setStep(8,'active');
+    renderResultMetrics();
+    renderClfTable();
+    renderPerClassTable();
+    renderConfusion();
+    renderCharts();
+    renderNotes(cfg);
+    setStep(8,'done');
+    setStatus('Recognition complete — accuracy '+pct(state.bestClf.testMetrics.accuracy)+' ('+state.bestClf.name+')','done');
+    toast('Recognition complete','ok');
+  }catch(e){
+    console.error(e);
+    setStatus('Error: '+e.message,'err');toast('Error: '+e.message,'err');
+  }finally{btn.disabled=false;}
+}
+function buildConfusionMatrix(actual,pred,labels){
+  const m=Array.from({length:labels.length},()=>new Float32Array(labels.length));
+  const idx={};labels.forEach((l,i)=>idx[l]=i);
+  for(let i=0;i<actual.length;i++)m[idx[actual[i]]][idx[pred[i]]]++;
+  return {matrix:m,labels};
+}
+
+/* ============================================================================
+   RENDERERS
+   ========================================================================== */
+function metricClass(v){return v>=0.85?'good':v>=0.6?'warn':'bad';}
+function renderResultMetrics(){
+  if(!state.bestClf)return;
+  const r=state.bestClf.testMetrics;
+  const t=state.bestClf.trainMetrics;
+  const cards=[
+    {l:'Test Accuracy',v:pct(r.accuracy),s:state.bestClf.name,cls:metricClass(r.accuracy)},
+    {l:'Train Accuracy',v:pct(t.accuracy),s:'fit on training',cls:metricClass(t.accuracy)},
+    {l:'Precision (macro)',v:pct(r.precision),s:'avg over classes',cls:metricClass(r.precision)},
+    {l:'Recall (macro)',v:pct(r.recall),s:'avg over classes',cls:metricClass(r.recall)},
+    {l:'F1 (macro)',v:pct(r.f1),s:'harmonic',cls:metricClass(r.f1)},
+    {l:'Balanced Accuracy',v:pct(r.balanced),s:'macro-recall',cls:metricClass(r.balanced)},
+    {l:'Specificity',v:pct(r.specificity),s:'macro-spec',cls:metricClass(r.specificity)},
+    {l:'MCC',v:fmt(r.mcc,4),s:'correlation',cls:metricClass((r.mcc+1)/2)},
+    {l:'Cohen κ',v:fmt(r.kappa,4),s:'agreement',cls:metricClass((r.kappa+1)/2)},
+    {l:'Classes',v:state.classNames.length,s:'identities',cls:'info'},
+    {l:'Test samples',v:state.splitData.Xtest.length,s:'held out',cls:'info'},
+    {l:'Features (OC-LBP)',v:state.features[0].length,s:'raw dim',cls:'info'},
+    {l:'PCA comp.',v:state.pca.components.length,s:'kept',cls:'info'},
+    {l:'LDA comp.',v:state.lda.components.length,s:'separability',cls:'info'},
+    {l:'Split',v:(state.splitData.trainIdx.length+'/'+state.splitData.testIdx.length),s:'train/test',cls:'info'},
+    {l:'Train time',v:state.bestClf.trainMs.toFixed(0)+' ms',s:state.bestClf.name,cls:'info'}
+  ];
+  $('resultMetrics').innerHTML=cards.map(c=>'<div class="metric '+c.cls+'"><div class="lbl">'+c.l+'</div><div class="val">'+c.v+'</div><div class="sub">'+c.s+'</div></div>').join('');
+}
+function renderClfTable(){
+  const results=state.results;
+  const bestAcc=Math.max(...results.map(r=>r.testMetrics.accuracy));
+  $('clfTable').innerHTML=results.map(r=>{
+    const t=r.testMetrics;
+    const accC=Math.abs(t.accuracy-bestAcc)<1e-9?'best':'';
+    return '<tr><td><span class="pill">'+r.name.toUpperCase()+'</span></td>'+
+      '<td>'+pct(r.trainAcc)+'</td>'+
+      '<td class="'+accC+'">'+pct(t.accuracy)+'</td>'+
+      '<td>'+pct(t.precision)+'</td><td>'+pct(t.recall)+'</td><td>'+pct(t.f1)+'</td>'+
+      '<td>'+pct(t.balanced)+'</td><td>'+pct(t.specificity)+'</td><td>'+fmt(t.mcc,4)+'</td>'+
+      '<td>'+r.trainMs.toFixed(0)+'</td><td>'+r.predMs.toFixed(0)+'</td></tr>';
+  }).join('');
+}
+function renderPerClassTable(){
+  const r=state.bestClf;if(!r)return;
+  const pc=r.testMetrics.perClass;
+  const counts={};
+  for(const l of state.splitData.ytrain)counts[l]=(counts[l]||0)+1;
+  const testCounts={};
+  for(const l of state.splitData.ytest)testCounts[l]=(testCounts[l]||0)+1;
+  $('perClassTable').innerHTML=r.testMetrics.labels.map(l=>{
+    const m=pc[l]||{accuracy:0,tp:0};
+    return '<tr><td>'+l+'</td><td>'+counts[l]+'</td><td>'+testCounts[l]+'</td><td>'+m.tp+'</td><td>'+pct(m.accuracy)+'</td></tr>';
+  }).join('');
+}
+function renderConfusion(){
+  const r=state.bestClf;if(!r)return;
+  const {matrix,labels}=r.confusion;
+  const n=labels.length;
+  let maxV=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)maxV=Math.max(maxV,matrix[i][j]);
+  const cols='44px repeat('+n+',minmax(34px,1fr))';
+  let html='<div class="cm" style="grid-template-columns:'+cols+'">';
+  html+='<div class="row-label"></div>';
+  for(const l of labels)html+='<div class="col-label">'+l.slice(0,4)+'</div>';
+  for(let i=0;i<n;i++){
+    html+='<div class="row-label">'+labels[i].slice(0,6)+'</div>';
+    for(let j=0;j<n;j++){
+      const v=matrix[i][j],fraction=maxV?v/maxV:0;
+      const r1=Math.round(20+(1-fraction)*40),g=Math.round(40+(1-fraction)*80),b=Math.round(80+(1-fraction)*120);
+      const bg='rgb('+r1+','+g+','+b+')';
+      const isDiag=i===j;
+      html+='<div class="cell" style="background:'+bg+';color:'+(isDiag?'#34d399':'#dbe6ff')+'">'+v+'</div>';
+    }
+  }
+  html+='</div>';
+  $('cmBox').innerHTML=html;
+}
+function renderCharts(){
+  const results=state.results;
+  const names=results.map(r=>r.name.toUpperCase());
+  const accs=results.map(r=>r.testMetrics.accuracy);
+  const trainAccs=results.map(r=>r.trainAcc);
+  // Accuracy bar (grouped train/test)
+  multiBarChart($('chAcc'),names,[
+    {name:'Train Acc.',color:C.ok,values:trainAccs},
+    {name:'Test Acc.',color:C.acc,values:accs}
+  ],1);
+  // PRF
+  multiBarChart($('chPRF'),names,[
+    {name:'Precision',color:C.acc,values:results.map(r=>r.testMetrics.precision)},
+    {name:'Recall',color:C.acc2,values:results.map(r=>r.testMetrics.recall)},
+    {name:'F1',color:C.pink,values:results.map(r=>r.testMetrics.f1)}
+  ],1);
+  // Time
+  multiBarChart($('chTime'),names,[
+    {name:'Train (ms)',color:C.warn,values:results.map(r=>r.trainMs/1000)},
+    {name:'Predict (ms)',color:C.acc,values:results.map(r=>r.predMs/100)}
+  ],Math.max(0.5,...results.map(r=>r.trainMs/1000))+0.5);
+  // Split comparison (if any)
+  if(state.splitComparison.length){
+    const spLabels=state.splitComparison.map(s=>s.split);
+    multiBarChart($('chSplit'),spLabels,[
+      {name:'Best classifier test acc.',color:C.acc,values:state.splitComparison.map(s=>s.accuracy)}
+    ],1);
+  } else {
+    barChart($('chSplit'),['Run "Compare All Splits"'], [0], [C.mut],1);
+  }
+  // PCA 2-D scatter
+  const pc=state.splitData.Xpca;
+  const pcaPts=[];
+  for(let i=0;i<pc.length;i++){
+    pcaPts.push({x:pc[i][0]||0,y:pc[i][1]||0,c:state.labels[i]});
+  }
+  const groupsPCA={};
+  for(const p of pcaPts){if(!groupsPCA[p.c])groupsPCA[p.c]=[];groupsPCA[p.c].push(p);}
+  const colorsPool=['#22d3ee','#a78bfa','#34d399','#fbbf24','#f87171','#f472b6','#60a5fa','#fb923c','#4ade80','#e879f9','#facc15','#38bdf8'];
+  const groupsA=Object.keys(groupsPCA).map((c,i)=>({name:c,color:colorsPool[i%colorsPool.length],pts:groupsPCA[c]}));
+  scatter($('chPCA'),groupsA);
+  // LDA 2-D scatter
+  const lc=state.splitData.Xlda;
+  const ldaGroups={};
+  for(let i=0;i<lc.length;i++){
+    const k=state.labels[i];if(!ldaGroups[k])ldaGroups[k]=[];
+    ldaGroups[k].push({x:lc[i][0]||0,y:lc[i][1]||0});
+  }
+  const groupsL=Object.keys(ldaGroups).map((c,i)=>({name:c,color:colorsPool[i%colorsPool.length],pts:ldaGroups[c]}));
+  scatter($('chLDA'),groupsL);
+  // Per-class accuracy (best classifier)
+  const pcv=state.bestClf.testMetrics.perClass;
+  const cLabels=state.bestClf.testMetrics.labels;
+  barChart($('chPerClass'),cLabels,cLabels.map(l=>pcv[l]?pcv[l].accuracy:0),
+    cLabels.map((_,i)=>colorsPool[i%colorsPool.length]),1,'%');
+  // Balanced vs Specificity
+  multiBarChart($('chBal'),names,[
+    {name:'Balanced Acc.',color:C.ok,values:results.map(r=>r.testMetrics.balanced)},
+    {name:'Specificity',color:C.acc2,values:results.map(r=>r.testMetrics.specificity)}
+  ],1);
+}
+function renderNotes(cfg){
+  const r=state.bestClf;
+  const rM=r.testMetrics;
+  const active=['median','gaussian','clahe','histeq','unsharp','contrast'].filter(k=>cfg.preprocess.has(k));
+  const convA=['gabor','sobel','laplacian','dog'].filter(k=>cfg.conv.has(k));
+  const envA=['gamma','retinex','msr','whitepatch'].filter(k=>cfg.env.has(k));
+  const angA=['symmetry','affine','perspective'].filter(k=>cfg.angle.has(k));
+  const notes=[
+    '<span class="tag">Pipeline: OC-LBP + PCA + LDA</span>',
+    '<span class="tag">Detector: '+cfg.detector+'</span>',
+    '<span class="tag">Face size: '+cfg.faceSize+'</span>',
+    '<span class="tag">Grid: '+cfg.gridSize+'×'+cfg.gridSize+'</span>',
+    '<span class="tag">OC-LBP dim: '+state.features[0].length+'</span>',
+    '<span class="tag">PCA: '+state.pca.components.length+'</span>',
+    '<span class="tag">LDA: '+state.lda.components.length+'</span>',
+    '<span class="tag">Split: '+(state.splitData.trainIdx.length)+'/'+(state.splitData.testIdx.length)+'</span>',
+    '<br><br>',
+    '<b>Preprocessing.</b> '+(active.join(', ')||'(none)')+'.<br>',
+    '<b>Convolution.</b> '+(convA.join(', ')||'(none)')+'.<br>',
+    '<b>Environment robustness.</b> '+(envA.join(', ')||'(none)')+'.<br>',
+    '<b>Angle robustness.</b> '+(angA.join(', ')||'(none)')+'.<br><br>',
+    '<b>Best classifier: '+r.name.toUpperCase()+'.</b> Test accuracy <b>'+pct(rM.accuracy)+'</b>, precision '+pct(rM.precision)+', recall '+pct(rM.recall)+', F1 '+pct(rM.f1)+', balanced accuracy '+pct(rM.balanced)+', specificity '+pct(rM.specificity)+', MCC '+fmt(rM.mcc,4)+', Cohen κ '+fmt(rM.kappa,4)+'.<br><br>',
+    '<b>All classifiers tested:</b> '+state.results.map(x=>x.name.toUpperCase()+' '+pct(x.testMetrics.accuracy)).join(' · ')+'.<br><br>',
+    '<b>Note.</b> Features come from the OC-LBP histograms over 6 LBP maps (R, G, B intra-channel + 3 opponent pairs) across a '+cfg.gridSize+'×'+cfg.gridSize+' spatial grid, then PCA-reduced and LDA-projected to maximise class separability before classification.<br><br>',
+    '<span style="color:var(--acc);font-weight:600">Created by Payal Parekh</span>'
+  ].join('');
+  $('notes').innerHTML=notes;
+}
+
+/* ============================================================================
+   SPLIT SWEEP
+   ========================================================================== */
+async function runAllSplits(){
+  const btn=$('btnSplits');btn.disabled=true;
+  try{
+    state.splitComparison=[];
+    for(const sp of [0.7,0.8,0.9]){
+      $('splitRatio').value=String(sp);
+      await runPipeline(sp);
+      state.splitComparison.push({split:(sp*100).toFixed(0)+'/'+((1-sp)*100).toFixed(0),accuracy:state.bestClf.testMetrics.accuracy,classifier:state.bestClf.name});
+    }
+    $('splitRatio').value='0.7';
+    renderCharts();
+    toast('Split comparison done','ok');
+  }catch(e){toast(e.message,'err');}
+  finally{btn.disabled=false;}
+}
+
+/* ============================================================================
+   CSV / JSON
+   ========================================================================== */
+function downloadBlob(content,filename,type){
+  const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function csvCell(v){const t=v==null?'':String(v);return '"'+t.replace(/"/g,'""')+'"';}
+function downloadCSV(){
+  if(!state.results.length){toast('Run the pipeline first','err');return;}
+  const lines=[];
+  lines.push(['Report','OC-LBP + PCA + LDA + Multi-Classifier'],['Created by','Payal Parekh'],
+    ['Identities',state.classNames.length],['Features (raw)',state.features[0].length],
+    ['PCA comps',state.pca.components.length],['LDA comps',state.lda.components.length],[]);
+  lines.push(['Classifier','Train Acc','Test Acc','Precision','Recall','F1','Balanced Acc','Specificity','MCC','Kappa','Train ms','Predict ms']);
+  for(const r of state.results){
+    lines.push([r.name,r.trainAcc,r.testMetrics.accuracy,r.testMetrics.precision,r.testMetrics.recall,
+      r.testMetrics.f1,r.testMetrics.balanced,r.testMetrics.specificity,r.testMetrics.mcc,r.testMetrics.kappa,r.trainMs,r.predMs]);
+  }
+  lines.push([]);
+  lines.push(['Per-class (best classifier)']);
+  const pcv=state.bestClf.testMetrics.perClass;
+  lines.push(['Identity','TP','FP','FN','Precision','Recall','F1','Specificity','Accuracy']);
+  for(const l of state.bestClf.testMetrics.labels){
+    const m=pcv[l]||{};
+    lines.push([l,m.tp||0,m.fp||0,m.fn||0,m.precision||0,m.recall||0,m.f1||0,m.specificity||0,m.accuracy||0]);
+  }
+  if(state.splitComparison.length){
+    lines.push([]);lines.push(['Split comparison']);
+    lines.push(['Split','Best classifier','Accuracy']);
+    for(const s of state.splitComparison)lines.push([s.split,s.classifier,s.accuracy]);
+  }
+  downloadBlob(lines.map(x=>x.map(csvCell).join(',')).join('\r\n'),'oc-lbp-recognition-metrics.csv','text/csv');
+  toast('CSV downloaded','ok');
+}
+function downloadJSON(){
+  if(!state.results.length){toast('Run the pipeline first','err');return;}
+  const payload={
+    generated:new Date().toISOString(),created_by:'Payal Parekh',
+    pipeline:'OC-LBP + PCA + LDA + Multi-Classifier',
+    database:{identities:state.classNames.length,featuresRaw:state.features[0].length},
+    pca:{components:state.pca.components.length},
+    lda:{components:state.lda.components.length},
+    split:{train:state.splitData.trainIdx.length,test:state.splitData.testIdx.length,ratio:(state.splitData.trainIdx.length/(state.splitData.trainIdx.length+state.splitData.testIdx.length)).toFixed(3)},
+    results:state.results.map(r=>({classifier:r.name,trainAcc:r.trainAcc,testAcc:r.testMetrics.accuracy,
+      precision:r.testMetrics.precision,recall:r.testMetrics.recall,f1:r.testMetrics.f1,
+      balanced:r.testMetrics.balanced,specificity:r.testMetrics.specificity,
+      mcc:r.testMetrics.mcc,kappa:r.testMetrics.kappa,trainMs:r.trainMs,predictMs:r.predMs})),
+    best:state.bestClf.name,
+    splitComparison:state.splitComparison
+  };
+  downloadBlob(JSON.stringify(payload,null,2),'oc-lbp-recognition.json','application/json');
+  toast('JSON downloaded','ok');
+}
+
+/* ============================================================================
+   EVENT WIRING
+   ========================================================================== */
+['cvOriginal','cvDetected','cvPreprocessed','cvRobust','cvLbpMap'].forEach(id=>paint($(id),null));
+['chAcc','chPRF','chTime','chSplit','chPCA','chLDA','chPerClass','chBal'].forEach(id=>{const el=$(id);if(el)chartSetup(el);});
+window.addEventListener('resize',()=>{
+  if(state.results.length){try{renderCharts();}catch(_){}}
+});
+
+const drop=$('dbDrop'),fileInput=$('dbInput');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragenter',e=>{e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragleave',e=>{e.preventDefault();drop.classList.remove('over');});
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');
+  const files=e.dataTransfer.files;if(files&&files.length)ingestFolder(files);});
+fileInput.addEventListener('change',e=>{const files=e.target.files;if(files&&files.length)ingestFolder(files);fileInput.value='';});
+
+$('pcaComp').addEventListener('input',e=>$('pcaCompVal').textContent=e.target.value);
+$('ldaComp').addEventListener('input',e=>$('ldaCompVal').textContent=e.target.value);
+
+$('btnRun').addEventListener('click',()=>runPipeline());
+$('btnSplits').addEventListener('click',runAllSplits);
+$('btnCsv').addEventListener('click',downloadCSV);
+$('btnJson').addEventListener('click',downloadJSON);
+$('btnReset').addEventListener('click',()=>{
+  Object.assign(state,{identities:[],features:[],labels:[],classNames:[],pca:null,lda:null,splitData:null,results:[],bestClf:null,splitComparison:[]});
+  ['cvOriginal','cvDetected','cvPreprocessed','cvRobust','cvLbpMap'].forEach(id=>paint($(id),null));
+  $('dbMetrics').innerHTML='';$('resultMetrics').innerHTML='';
+  $('clfTable').innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--mut);padding:26px">Run the pipeline to populate the comparison table.</td></tr>';
+  $('perClassTable').innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--mut);padding:26px">—</td></tr>';
+  $('cmBox').innerHTML='<div class="row-label" style="grid-column:1/-1">Run the pipeline to render the confusion matrix.</div>';
+  $('notes').textContent='Awaiting pipeline execution.';
+  $('evidenceHint').textContent='Processed evidence will appear here after running the pipeline.';
+  $('dbHint').textContent='PersonA/ (photos), PersonB/, ... PersonN/ · Each folder becomes one identity class.';
+  ['chAcc','chPRF','chTime','chSplit','chPCA','chLDA','chPerClass','chBal'].forEach(id=>{const el=$(id);if(el)chartSetup(el);});
+  resetSteps();setStatus('Reset — upload identity folders to begin','');toast('Reset','ok');
+});
+
+setStatus('Ready — upload identity folders to begin','done');
+console.log('%c◈ Face Recognition · OC-LBP + PCA/LDA + Multi-Classifier — Created by Payal Parekh','color:#22d3ee;font-weight:bold');
+console.log('Pipeline: detect → preprocess → robustness (conv/env/angle) → OC-LBP → PCA → LDA → split → 7 classifiers → metrics + graphs');
+
+})();
+</script>
+</body>
+</html>
